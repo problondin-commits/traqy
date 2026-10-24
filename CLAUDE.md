@@ -82,4 +82,7 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - La migration de Leakr vers Traqy est faite.
 - Étape 1 terminée (24/10/2026) : Git 2.55 et Node.js 24 (LTS) installés. Compte GitHub : problondin-commits. Dossier envoyé dans le dépôt privé github.com/problondin-commits/traqy (branche main).
 - Étape 2 en cours. Fait (24/10/2026) : barème par défaut retiré du moteur. Les montants viennent seulement des taux saisis par le client ; sans taux, l'usage est gardé comme preuve, sans montant. Vocabulaire corrigé (« non perçus », plus de « perdues » ni « Leak »). app.py adapté.
-- Prochaine tâche : déplacer les calculs du Colab Leakr dans le moteur (Tom doit fournir le fichier du Colab).
+- Fait (24/10/2026) : calculs du Colab Leakr déplacés dans calculs.py (Valeur, Projection, test à rebours, mode estimation). Résultats vérifiés identiques au Colab sur des relevés fictifs. Nouvelles entrées de l'API : /api/v1/releves/produits, /api/v1/valeur, /api/v1/estimation. Le mode estimation exige le taux du client (plus de 3,5 € / 1 000 ni de +4 % par défaut). Les informations privées (contrats, taux de partage, frais) ne sont jamais renvoyées.
+- Colab de référence : Téléchargements > Traqy_migration_Leakr > reference_calcul > NEIA_audit_Colab.ipynb.
+- À trancher par Tom : l'estimation des revenus d'avant les relevés (4 coefficients sans source : 0,884 ; 1,064 ; 1,12 ; 0,87, et écoutes Kworb). Non reprise pour l'instant.
+- Prochaine tâche : import du catalogue et des relevés (le format lu aujourd'hui est celui d'un seul distributeur).

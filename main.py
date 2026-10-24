@@ -1,8 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import Enum
 import uuid
 import io
@@ -14,6 +14,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+import calculs
 
 app = FastAPI(title="Traqy API", version="1.1.0")
 
@@ -360,3 +361,76 @@ def audit_pack(data: AuditPackRequest):
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="Pack_Audit_{audit["audit_id"]}.zip"'},
     )
+
+# ---------- Valeur et Projection (relevés du distributeur, calculs dans calculs.py) ----------
+
+async def lire_fichiers(fichiers: List[UploadFile]):
+    controle = []
+    try:
+        D = calculs.lire_releves([(f.filename or "releve.csv", await f.read()) for f in fichiers], controle)
+    except calculs.ErreurReleves as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return D, controle
+
+def verifier_date(valeur, nom):
+    try:
+        return date.fromisoformat(valeur)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"{nom} : date attendue au format AAAA-MM-JJ.")
+
+@app.post("/api/v1/releves/produits")
+async def produits_des_releves(fichiers: List[UploadFile] = File(...)):
+    D, controle = await lire_fichiers(fichiers)
+    return {"produits": calculs.lister_produits(D), "controles": controle}
+
+# Les informations privées (contrats, taux de partage, frais) ne sont jamais renvoyées
+@app.post("/api/v1/valeur")
+async def valeur_et_projection(
+    fichiers: List[UploadFile] = File(...),
+    produits: List[str] = Form(...),
+    fin: str = Form(...),
+    aujourdhui: Optional[str] = Form(None),
+    baisse_min: float = Form(0.05, gt=0, lt=1),
+    baisse_max: float = Form(0.35, gt=0, lt=1),
+    fenetre: int = Form(12, ge=3, le=60),
+    avec_video: bool = Form(False),
+    sortie: Optional[str] = Form(None),
+):
+    jour = verifier_date(aujourdhui, "Date du jour") if aujourdhui else date.today()
+    if verifier_date(fin, "Date de fin") <= jour:
+        raise HTTPException(status_code=400, detail="La date de fin doit être après la date du jour.")
+    if baisse_min > baisse_max:
+        raise HTTPException(status_code=400, detail="La baisse minimale doit être inférieure à la baisse maximale.")
+    if sortie and not re.fullmatch(r"[0-9]{4}-[0-9]{2}", sortie[:7]):
+        raise HTTPException(status_code=400, detail="Mois de sortie attendu au format AAAA-MM.")
+    D, controle = await lire_fichiers(fichiers)
+    try:
+        resultat, controles, _prive = calculs.calculer_valeur(D, produits, fin, jour.isoformat(), baisse_min, baisse_max,
+                                                               fenetre, avec_video, sortie)
+    except calculs.ErreurReleves as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"resultat": resultat, "controles": controle + controles}
+
+
+# ---------- Mode estimation (sans relevés) : taux saisis par le client ----------
+
+class AlbumEstime(BaseModel):
+    album: str = Field(min_length=1, max_length=200)
+    ecoutes_cumulees: float = Field(ge=0)
+    ecoutes_par_jour: float = Field(ge=0)
+
+class EstimationRequest(BaseModel):
+    albums: List[AlbumEstime] = Field(min_length=1, max_length=200)
+    fin: date
+    aujourdhui: Optional[date] = None
+    taux_pour_1000: float = Field(gt=0, description="Revenu du client pour 1 000 écoutes, en euros")
+    majoration_physique: float = Field(ge=0, le=1, description="Part ajoutée pour les ventes physiques (0,04 = +4 %)")
+    baisse_annuelle: float = Field(default=0.24, gt=0, lt=1)
+
+@app.post("/api/v1/estimation")
+def estimation(data: EstimationRequest):
+    jour = data.aujourdhui or date.today()
+    if data.fin <= jour:
+        raise HTTPException(status_code=400, detail="La date de fin doit être après la date du jour.")
+    return calculs.estimer([a.model_dump() for a in data.albums], data.fin.isoformat(), jour.isoformat(),
+                           data.taux_pour_1000, data.majoration_physique, data.baisse_annuelle)
