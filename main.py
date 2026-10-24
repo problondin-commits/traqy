@@ -1,5 +1,6 @@
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Security, UploadFile
 from fastapi.responses import Response
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 from typing import List, Optional
 from datetime import date, datetime, timezone
@@ -10,6 +11,8 @@ import csv
 import zipfile
 import re
 import xml.etree.ElementTree as ET
+import os
+import secrets
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -18,7 +21,21 @@ import base
 import calculs
 import importation
 
-app = FastAPI(title="Traqy API", version="1.1.0")
+# Clé d'API : chaque appel doit l'envoyer dans l'en-tête X-API-Key. Elle est lue dans TRAQY_API_KEY
+# (fichier .env sur l'ordinateur, réglages du service chez Render), jamais écrite dans le code.
+# Seule la page d'accueil « / » reste ouverte, pour vérifier que le service est en ligne.
+cle_api = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def verifier_cle(request: Request, cle: Optional[str] = Security(cle_api)):
+    if request.url.path == "/":
+        return
+    attendue = os.getenv("TRAQY_API_KEY", "").strip()
+    if not attendue:
+        raise HTTPException(status_code=503, detail="Clé d'API non configurée sur le serveur.")
+    if not cle or not secrets.compare_digest(cle.strip(), attendue):
+        raise HTTPException(status_code=401, detail="Clé d'API absente ou incorrecte.")
+
+app = FastAPI(title="Traqy API", version="1.2.0", dependencies=[Security(verifier_cle)])
 
 class InfractionItem(BaseModel):
     platform: str = Field(min_length=1, max_length=50)
@@ -33,7 +50,15 @@ class FullReportRequest(BaseModel):
 
 @app.get("/")
 def lire_racine():
-    return {"status": "online", "system": "Traqy API"}
+    """Page d'accueil ouverte : dit si le service et la base répondent, sans montrer aucune donnée."""
+    etat_base = "non configurée"
+    if base.configuree():
+        try:
+            base.verifier()
+            etat_base = "connectée"
+        except Exception:
+            etat_base = "injoignable"
+    return {"status": "online", "system": "Traqy API", "base": etat_base}
 
 @app.post("/full-report/")
 def generate_full_report(data: FullReportRequest):

@@ -1,0 +1,21 @@
+# Traqy · Fiche de mise en ligne chez Render (lue par Render quand on crée un « Blueprint »).
+# Un service web gratuit, à Francfort. Les secrets ne sont pas écrits ici :
+#   - DATABASE_URL : saisi par Tom dans Render (même adresse que dans le fichier .env) ;
+#   - TRAQY_API_KEY : clé d'API créée automatiquement par Render, visible dans les réglages du service.
+services:
+  - type: web
+    name: traqy-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: DATABASE_URL
+        sync: false
+      - key: TRAQY_API_KEY
+        generateValue: true

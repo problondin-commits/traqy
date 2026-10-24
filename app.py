@@ -1,7 +1,12 @@
+import os
 import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+CLE_API = os.getenv("TRAQY_API_KEY", "")
 
 API = "http://127.0.0.1:8000"
 
@@ -136,7 +141,7 @@ def preparer_donnees():
 
 def appeler_api(chemin, donnees):
     try:
-        reponse = requests.post(f"{API}{chemin}", json=donnees, timeout=30)
+        reponse = requests.post(f"{API}{chemin}", json=donnees, headers={"X-API-Key": CLE_API}, timeout=30)
     except requests.exceptions.RequestException:
         st.error("Service d'audit indisponible. Vérifiez que l'API est démarrée.")
         st.stop()

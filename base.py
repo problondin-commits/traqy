@@ -59,14 +59,25 @@ TABLES = {nom: table_depuis(nom, modele) for nom, modele, _ in CONTENU}
 
 _moteur = None
 
+def adresse():
+    """Adresse de la base, nettoyée (tolère « DATABASE_URL= » collé devant, des guillemets ou des espaces)."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url.startswith("DATABASE_URL="):
+        url = url[len("DATABASE_URL="):]
+    return url.strip().strip("'\"").strip()
+
 def configuree():
-    return bool(os.getenv("DATABASE_URL"))
+    return bool(adresse())
+
+def verifier():
+    with moteur().connect() as c:
+        c.execute(text("select 1"))
 
 def moteur():
     """Connexion unique, créée au premier usage. Les tables manquantes sont créées à ce moment-là."""
     global _moteur
     if _moteur is None:
-        url = os.environ["DATABASE_URL"].strip().replace("postgresql://", "postgresql+psycopg://", 1)
+        url = adresse().replace("postgresql://", "postgresql+psycopg://", 1)
         _moteur = create_engine(url, pool_pre_ping=True, pool_size=3, max_overflow=2)
         with _moteur.begin() as c:
             c.execute(text(f"create schema if not exists {SCHEMA}"))
