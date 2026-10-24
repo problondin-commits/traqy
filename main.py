@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, Security, Uploa
 from fastapi.responses import Response
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, HttpUrl, model_validator
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import date, datetime, timezone
 from enum import Enum
 import uuid
@@ -520,8 +520,13 @@ def verifier_projection(fin, baisse_min, baisse_max):
     if not (0 < baisse_min <= baisse_max < 1):
         raise HTTPException(status_code=400, detail="Baisse annuelle attendue entre 0 et 100 %, la minimale avant la maximale.")
 
+class Fourchette(str, Enum):
+    catalogue = "catalogue"   # base de l'artiste, mesurée sur ses titres
+    manuelle = "manuelle"     # baisse min / max réglées à la main
+
 @app.get("/api/v1/imports/{import_id}/projection")
-def projection_import(import_id: int, fin: date, baisse_min: float = 0.05, baisse_max: float = 0.35):
+def projection_import(import_id: int, fin: date, baisse_min: float = 0.05, baisse_max: float = 0.35,
+                      fourchette: Fourchette = Fourchette.catalogue):
     verifier_projection(fin, baisse_min, baisse_max)
     if not base.configuree():
         raise HTTPException(status_code=503, detail="Base de données non configurée.")
@@ -529,7 +534,7 @@ def projection_import(import_id: int, fin: date, baisse_min: float = 0.05, baiss
     if imp is None:
         raise HTTPException(status_code=404, detail="Import introuvable.")
     try:
-        return projection.projeter_import(imp, fin, date.today(), baisse_min, baisse_max)
+        return projection.projeter_import(imp, fin, date.today(), baisse_min, baisse_max, fourchette.value)
     except projection.HistoriqueInsuffisant as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -539,9 +544,11 @@ class MoisMontant(BaseModel):
 
 class ProjectionRequest(BaseModel):
     historique: List[MoisMontant] = Field(min_length=1, max_length=600)
+    titres: Dict[str, List[MoisMontant]] = Field(default_factory=dict, max_length=500)   # courbes par titre (base de l'artiste)
     fin: date
     baisse_min: float = 0.05
     baisse_max: float = 0.35
+    fourchette: Fourchette = Fourchette.catalogue
 
 @app.post("/api/v1/projection")
 def projection_libre(data: ProjectionRequest):
@@ -549,8 +556,12 @@ def projection_libre(data: ProjectionRequest):
     verifier_projection(data.fin, data.baisse_min, data.baisse_max)
     serie = pd.Series({pd.Period(m.mois, "M"): m.valeur for m in data.historique}).sort_index()
     serie = serie.reindex(pd.period_range(serie.index.min(), serie.index.max(), freq="M"), fill_value=0.0)
+    fin_artiste = serie.index.max().year * 12 + serie.index.max().month - 1
+    base = projection.base_depuis_courbes({t: {m.mois: m.valeur for m in c} for t, c in data.titres.items()}, fin_artiste) \
+        if data.titres else None
     try:
-        return projection.projeter_serie(serie, data.fin, date.today(), data.baisse_min, data.baisse_max)
+        return projection.projeter_serie(serie, data.fin, date.today(), data.baisse_min, data.baisse_max,
+                                         base=base, fourchette=data.fourchette.value)
     except projection.HistoriqueInsuffisant as e:
         raise HTTPException(status_code=422, detail=str(e))
 

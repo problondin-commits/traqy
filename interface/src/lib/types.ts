@@ -83,6 +83,8 @@ export type Projection = {
   baisse_min: number;
   baisse_max: number;
   hors_fourchette: boolean;
+  fourchette_source: "catalogue" | "manuelle";
+  base_artiste: BaseArtiste;
   niveau_mensuel: number;
   periodes: { label: string; valeur: number }[];
   fiabilite: {
@@ -93,7 +95,21 @@ export type Projection = {
   };
 };
 
-export type ReglagesProjection = { fin: string; baisse_min: number; baisse_max: number };
+// Base de l'artiste : baisse de chacun de ses titres, mesurée sur ses seuls relevés
+export type BaseArtiste = {
+  disponible: boolean;
+  raison: string | null;
+  titres_mesures: number;
+  titres_minimum: number;
+  baisse_moyenne?: number;
+  baisse_basse?: number;
+  baisse_haute?: number;
+  titres: { titre: string; baisse: number; revenus_12_mois: number }[];
+};
+
+export type Fourchette = "catalogue" | "manuelle";
+
+export type ReglagesProjection = { fin: string; baisse_min: number; baisse_max: number; fourchette: Fourchette };
 
 export type Rapport = {
   titre: string;

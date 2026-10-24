@@ -100,14 +100,23 @@ const catalogueDemo: LigneCatalogue[] = [
   { titre: "Archipel", artiste: "Kenzo Rive", iswc: null, isrc: null, ayants_droit: 2, parts_dep: 100, revenus: 0 },
 ];
 
-// Chiffre d'affaires mensuel inventé (juillet 2023 à juin 2026) : un album qui démarre fort puis baisse doucement.
-export const historiqueDemo = Array.from({ length: 36 }, (_, i) => {
-  const annee = 2023 + Math.floor((i + 6) / 12);
-  const mois = ((i + 6) % 12) + 1;
-  const lancement = i < 3 ? [0.45, 1.25, 1.1][i] : 1;
-  const saison = 1 + 0.08 * Math.sin((i / 12) * 2 * Math.PI);
-  return { mois: `${annee}-${String(mois).padStart(2, "0")}`, valeur: Math.round(9800 * Math.exp(-0.022 * i) * lancement * saison) };
-});
+// Chiffre d'affaires mensuel inventé (juillet 2023 à juin 2026), titre par titre : chaque titre démarre fort
+// puis baisse à son propre rythme. Le total du label est la somme des titres.
+const MOIS_DEMO = Array.from({ length: 36 }, (_, i) => `${2023 + Math.floor((i + 6) / 12)}-${String(((i + 6) % 12) + 1).padStart(2, "0")}`);
+const RYTHMES_DEMO: [string, number, number][] = [ // titre, niveau de départ (€ / mois), baisse mensuelle
+  ["Minuit Pile", 3200, 0.018], ["Ciel Ouvert", 2100, 0.03], ["Ligne 7", 1500, 0.012],
+  ["Rive Gauche", 1200, 0.026], ["Lumière Basse", 900, 0.035], ["Sable Noir", 650, 0.009],
+];
+export const titresDemo: Record<string, { mois: string; valeur: number }[]> = Object.fromEntries(
+  RYTHMES_DEMO.map(([titre, niveau, baisse]) => [titre, MOIS_DEMO.map((mois, i) => {
+    const lancement = i < 3 ? [0.45, 1.25, 1.1][i] : 1;
+    const saison = 1 + 0.08 * Math.sin((i / 12) * 2 * Math.PI);
+    return { mois, valeur: Math.round(niveau * Math.exp(-baisse * i) * lancement * saison) };
+  })]),
+);
+export const historiqueDemo = MOIS_DEMO.map((mois, i) => ({
+  mois, valeur: Object.values(titresDemo).reduce((s, c) => s + c[i].valeur, 0),
+}));
 
 // En démo, les alertes ont des numéros négatifs : les décisions restent dans le navigateur.
 export const vueDemo: Vue = {

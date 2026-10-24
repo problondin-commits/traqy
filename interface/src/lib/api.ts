@@ -50,16 +50,16 @@ export function deciderFuite(fuiteId: number, decision: string | null) {
 }
 
 export function lireProjection(importId: number, r: ReglagesProjection) {
-  const q = new URLSearchParams({ fin: r.fin, baisse_min: String(r.baisse_min), baisse_max: String(r.baisse_max) });
+  const q = new URLSearchParams({ fin: r.fin, baisse_min: String(r.baisse_min), baisse_max: String(r.baisse_max), fourchette: r.fourchette });
   return appel<Projection>(`/api/v1/imports/${importId}/projection?${q}`);
 }
 
-/** Projection d'une courbe fournie directement (mode démo). */
-export function projeterCourbe(historique: MoisMontant[], r: ReglagesProjection) {
+/** Projection d'une courbe fournie directement, avec ses courbes par titre (mode démo). */
+export function projeterCourbe(historique: MoisMontant[], titres: Record<string, MoisMontant[]>, r: ReglagesProjection) {
   return appel<Projection>("/api/v1/projection", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ historique, ...r }),
+    body: JSON.stringify({ historique, titres, ...r }),
   });
 }
 
