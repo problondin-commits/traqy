@@ -47,7 +47,7 @@ def type_sql(annotation):
 def table_depuis(nom, modele):
     colonnes = [Column("id", Integer, primary_key=True),
                 Column("import_id", Integer, ForeignKey(f"{SCHEMA}.imports.id", ondelete="CASCADE"), nullable=False, index=True)]
-    colonnes += [Column(champ, type_sql(info.annotation)) for champ, info in modele.model_fields.items()]
+    colonnes += [Column(champ, type_sql(info.annotation)) for champ, info in modele.model_fields.items() if champ != "id"]
     return Table(nom, meta, *colonnes)
 
 # Contenu d'un import : nom de la table, modèle, champ de l'objet Import
@@ -82,7 +82,17 @@ def moteur():
         with _moteur.begin() as c:
             c.execute(text(f"create schema if not exists {SCHEMA}"))
             meta.create_all(c)
+            completer_colonnes(c)
     return _moteur
+
+def completer_colonnes(c):
+    """Ajoute aux tables existantes les colonnes apparues depuis dans modele.py (les données déjà là sont gardées)."""
+    for t in TABLES.values():
+        existantes = set(c.execute(text("select column_name from information_schema.columns "
+                                        "where table_schema = :s and table_name = :t"), {"s": SCHEMA, "t": t.name}).scalars())
+        for col in t.columns:
+            if col.name not in existantes:
+                c.execute(text(f'alter table {SCHEMA}.{t.name} add column "{col.name}" {col.type.compile(dialect=c.dialect)}'))
 
 def enregistrer_import(nom_client, imp):
     """Enregistre un import complet pour ce client (créé s'il n'existe pas). Renvoie le numéro de l'import."""
@@ -94,7 +104,7 @@ def enregistrer_import(nom_client, imp):
         import_id = c.execute(insert(imports).values(client_id=client_id, cree_le=maintenant, resume=imp.resume)
                               .returning(imports.c.id)).scalar()
         for nom, _, champ in CONTENU:
-            lignes = [dict(e.model_dump(mode="json"), import_id=import_id) for e in getattr(imp, champ)]
+            lignes = [dict(e.model_dump(mode="json", exclude={"id"}), import_id=import_id) for e in getattr(imp, champ)]
             for ligne in lignes:   # les dates restent des dates, pas du texte
                 for k, v in ligne.items():
                     if isinstance(TABLES[nom].c[k].type, Date) and v:
@@ -113,8 +123,17 @@ def lire_import(import_id):
         for nom, modele, champ in CONTENU:
             t = TABLES[nom]
             lignes = c.execute(select(t).where(t.c.import_id == import_id).order_by(t.c.id)).mappings().all()
-            setattr(imp, champ, [modele(**{k: v for k, v in l.items() if k not in ("id", "import_id")}) for l in lignes])
+            garder = lambda k: k != "import_id" and (k != "id" or "id" in modele.model_fields)
+            setattr(imp, champ, [modele(**{k: v for k, v in l.items() if garder(k)}) for l in lignes])
     return imp
+
+DECISIONS = ("validée", "écartée")
+
+def decider_fuite(fuite_id, decision):
+    """Enregistre le choix du client sur une alerte (None pour annuler). Renvoie False si l'alerte n'existe pas."""
+    t = TABLES["fuites"]
+    with moteur().begin() as c:
+        return c.execute(t.update().where(t.c.id == fuite_id).values(decision=decision)).rowcount == 1
 
 def lister_imports(nom_client=None):
     requete = (select(imports.c.id, imports.c.cree_le, imports.c.resume, clients.c.nom.label("client"))

@@ -122,6 +122,7 @@ class Manque(BaseModel):
 
 class Fuite(BaseModel):
     """Droits non perçus : ce qui n'a pas été versé, combien (quand c'est chiffrable) et à qui le réclamer."""
+    id: Optional[int] = None               # numéro dans la base, une fois enregistrée
     regle: str
     oeuvre: Optional[str] = None
     iswc: Optional[str] = None
@@ -132,6 +133,7 @@ class Fuite(BaseModel):
     methode: str
     action: str
     preuves: List[str] = Field(default_factory=list)
+    decision: Optional[str] = None         # choix du client : « validée » (à réclamer) ou « écartée »
 
 
 class Import(BaseModel):

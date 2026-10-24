@@ -20,6 +20,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 import base
 import calculs
 import importation
+import vues
 
 # Clé d'API : chaque appel doit l'envoyer dans l'en-tête X-API-Key. Elle est lue dans TRAQY_API_KEY
 # (fichier .env sur l'ordinateur, réglages du service chez Render), jamais écrite dans le code.
@@ -497,6 +498,30 @@ def relire_import(import_id: int):
     if imp is None:
         raise HTTPException(status_code=404, detail="Import introuvable.")
     return imp
+
+@app.get("/api/v1/imports/{import_id}/vue")
+def vue_pour_interface(import_id: int):
+    """Tout ce que l'interface affiche pour un import : bilans, manques, fuites et catalogue résumé."""
+    if not base.configuree():
+        raise HTTPException(status_code=503, detail="Base de données non configurée.")
+    imp = base.lire_import(import_id)
+    if imp is None:
+        raise HTTPException(status_code=404, detail="Import introuvable.")
+    cree_le = next((i["cree_le"] for i in base.lister_imports(imp.client) if i["id"] == import_id), None)
+    return vues.vue(imp, cree_le)
+
+class DecisionRequest(BaseModel):
+    decision: Optional[str] = Field(default=None, description="« validée », « écartée », ou vide pour annuler")
+
+@app.put("/api/v1/fuites/{fuite_id}/decision")
+def decider(fuite_id: int, data: DecisionRequest):
+    if data.decision not in (None, *base.DECISIONS):
+        raise HTTPException(status_code=400, detail="Décision attendue : « validée », « écartée » ou vide.")
+    if not base.configuree():
+        raise HTTPException(status_code=503, detail="Base de données non configurée.")
+    if not base.decider_fuite(fuite_id, data.decision):
+        raise HTTPException(status_code=404, detail="Alerte introuvable.")
+    return {"id": fuite_id, "decision": data.decision}
 
 @app.get("/api/v1/modele-catalogue")
 def modele_catalogue():
