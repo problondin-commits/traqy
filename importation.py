@@ -5,9 +5,9 @@ Chaque fichier déposé (CSV, Excel ou ZIP) est reconnu d'après ses colonnes,
 puis traduit dans le modèle interne unique (modele.py). Un traducteur par format.
 
 Formats reconnus aujourd'hui :
-  - Catalogue Traqy (ayants droit et parts, une ligne par ayant droit et par œuvre), identique au format Leakr
-  - Relevé distributeur lu par l'ancien Colab Leakr
-  - Relevés Leakr : écoutes, droits d'auteur, synchro et publicité, réseaux sociaux, retenues
+  - Catalogue Traqy (ayants droit et parts, une ligne par ayant droit et par œuvre)
+  - Relevé distributeur détaillé (format lu par l'ancien Colab)
+  - Relevés au format Traqy : écoutes, droits d'auteur, synchro et publicité, réseaux sociaux, retenues
 """
 import calendar
 import hashlib
@@ -19,6 +19,7 @@ from datetime import date
 
 import pandas as pd
 
+import controle
 from modele import BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu
 
 MOIS_NOMS = {m: i for i, m in enumerate(["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -67,7 +68,7 @@ def lire_periode(s):
     if m:
         a, mo = int(m.group(3)), int(m.group(2))
         return date(a, mo, 1), fin_mois(a, mo)
-    m = re.search(r"(\d{4})\s*S([12])\b", s)                           # 2022 S1 : semestre
+    m = re.search(r"(\d{4})\s*(?:semestre\s*)?S([12])\b", s, re.IGNORECASE)   # 2022 S1, 2022 semestre S1
     if m:
         a, sem = int(m.group(1)), int(m.group(2))
         return (date(a, 1, 1), date(a, 6, 30)) if sem == 1 else (date(a, 7, 1), date(a, 12, 31))
@@ -129,26 +130,26 @@ def tableaux(nom, brut, bilans):
 
 # --- Traducteurs ------------------------------------------------------------------------
 
-# Relevés Leakr : catégorie et correspondance champ Traqy -> colonne du fichier
-LEAKR = [
-    ("Relevé Leakr · écoutes", {"isrc", "nombre_ecoutes", "montant", "periode"}, Categorie.streaming,
+# Relevés au format Traqy : catégorie et correspondance champ Traqy -> colonne du fichier
+RELEVES_TRAQY = [
+    ("Relevé Traqy · écoutes", {"isrc", "nombre_ecoutes", "montant", "periode"}, Categorie.streaming,
      {"titre": "titre", "artiste": "artiste", "isrc": "isrc", "periode": "periode", "payeur": "distributeur",
       "plateforme": "plateforme", "pays": "pays_territoire", "quantite": "nombre_ecoutes", "montant": "montant", "devise": "devise"}),
-    ("Relevé Leakr · droits d'auteur", {"iswc", "code_oeuvre_sacem", "societe_ou_payeur", "montant"}, Categorie.droits_auteur,
+    ("Relevé Traqy · droits d'auteur", {"iswc", "code_oeuvre_sacem", "societe_ou_payeur", "montant"}, Categorie.droits_auteur,
      {"titre": "titre", "artiste": "artiste", "iswc": "iswc", "code_sacem": "code_oeuvre_sacem", "periode": "periode",
       "payeur": "societe_ou_payeur", "montant": "montant", "devise": "devise", "beneficiaire": "beneficiaire_du_montant"}),
-    ("Relevé Leakr · synchro et publicité", {"client_ou_marque", "type_usage", "montant"}, Categorie.synchro,
+    ("Relevé Traqy · synchro et publicité", {"client_ou_marque", "type_usage", "montant"}, Categorie.synchro,
      {"titre": "titre", "artiste": "artiste", "periode": "date", "payeur": "client_ou_marque", "pays": "territoire",
       "montant": "montant", "devise": "devise"}),
-    ("Relevé Leakr · réseaux sociaux", {"nombre_videos_utilisant_le_son", "nombre_vues", "montant"}, Categorie.reseaux_sociaux,
+    ("Relevé Traqy · réseaux sociaux", {"nombre_videos_utilisant_le_son", "nombre_vues", "montant"}, Categorie.reseaux_sociaux,
      {"titre": "titre", "artiste": "artiste", "isrc": "isrc", "periode": "periode", "plateforme": "plateforme",
       "quantite": "nombre_vues", "montant": "montant", "devise": "devise"}),
-    ("Relevé Leakr · retenues", {"motif", "montant", "plateforme"}, Categorie.retenue,
+    ("Relevé Traqy · retenues", {"motif", "montant", "plateforme"}, Categorie.retenue,
      {"titre": "titre", "artiste": "artiste", "periode": "mois", "plateforme": "plateforme", "montant": "montant", "devise": "devise"}),
 ]
 CHAMPS_NOMBRE = {"quantite", "montant"}
 
-def traduire_leakr(d, nom, categorie, champs, res, bilan):
+def traduire_releve_traqy(d, nom, categorie, champs, res, bilan):
     for i, ligne in d.iterrows():
         try:
             valeurs = {}
@@ -174,8 +175,7 @@ def traduire_leakr(d, nom, categorie, champs, res, bilan):
         bilan.lignes_importees += 1
 
 def traduire_distributeur(d, nom, res, bilan):
-    """Relevé distributeur de l'ancien Colab. Les frais et avances (informations privées) ne sont pas importés."""
-    privees = 0
+    """Relevé distributeur détaillé. Tout est importé : ventes, droits voisins, frais et avances, avec contrat et taux de partage."""
     for i, ligne in d.iterrows():
         type_ligne = texte(ligne["type"])
         if type_ligne == "Physical Sales":
@@ -184,8 +184,12 @@ def traduire_distributeur(d, nom, res, bilan):
             categorie = Categorie.streaming if texte(ligne.get("type dexploitation")) == "Streaming" else Categorie.ventes_numeriques
         elif type_ligne == "Neighboring Rights":
             categorie = Categorie.droits_voisins
+        elif type_ligne == "Expense":
+            categorie = Categorie.frais
+        elif type_ligne == "Advance":
+            categorie = Categorie.avance
         else:
-            privees += 1
+            noter(bilan, f"Ligne {i + 2} ignorée : type de ligne inconnu « {type_ligne} ».")
             continue
         try:
             montant, quantite = nombre(ligne["revenu"], "Revenu"), nombre(ligne.get("ventes nettes"), "Ventes nettes")
@@ -201,10 +205,10 @@ def traduire_distributeur(d, nom, res, bilan):
         res.revenus.append(Revenu(categorie=categorie, titre=texte(ligne["titre du produit / description"]),
                                   isrc=isrc.upper() if isrc else None, periode=periode, debut=debut, fin=fin,
                                   plateforme=texte(ligne.get("plateforme")), pays=texte(ligne.get("pays")),
-                                  quantite=quantite, montant=montant, devise=texte(ligne.get("devise")), fichier=nom, ligne=i + 2))
+                                  quantite=quantite, montant=montant, devise=texte(ligne.get("devise")),
+                                  contrat=texte(ligne.get("numéro de contrat")), taux_partage=texte(ligne.get("taux")),
+                                  fichier=nom, ligne=i + 2))
         bilan.lignes_importees += 1
-    if privees:
-        bilan.messages.append(f"{privees} lignes de frais, d'avances ou autres non importées (informations privées).")
 
 def traduire_catalogue(d, nom, res, bilan):
     col = lambda *noms: next((n for n in noms if n in d), None)
@@ -240,8 +244,8 @@ def noter(bilan, message):
 
 def reconnaitre(colonnes):
     if {"type", "titre du produit / description", "date de reporting", "revenu"} <= colonnes:
-        return "Relevé distributeur (format de l'ancien Colab)"
-    for nom_format, requises, _, _ in LEAKR:
+        return "Relevé distributeur détaillé"
+    for nom_format, requises, _, _ in RELEVES_TRAQY:
         if requises <= colonnes:
             return nom_format
     if {"titre", "ayant_droit"} <= colonnes:
@@ -274,18 +278,19 @@ def importer(fichiers):
             elif format_.startswith("Relevé distributeur"):
                 traduire_distributeur(d, nom_tab, res, bilan)
             else:
-                _, _, categorie, champs = next(f for f in LEAKR if f[0] == format_)
-                traduire_leakr(d, nom_tab, categorie, champs, res, bilan)
+                _, _, categorie, champs = next(f for f in RELEVES_TRAQY if f[0] == format_)
+                traduire_releve_traqy(d, nom_tab, categorie, champs, res, bilan)
             if bilan.statut == "importé" and bilan.lignes_importees == 0:
                 bilan.messages.append("Aucune ligne importée (fichier vide ou sans montant).")
             res.fichiers.append(bilan)
     res.oeuvres = fusionner(res.oeuvres, lambda o: (o.iswc or o.code_sacem or o.titre).lower())
     res.enregistrements = fusionner(res.enregistrements, lambda e: e.isrc)
+    res.manques = controle.controler(res)
     res.resume = {
         "fichiers_importes": sum(b.statut == "importé" for b in res.fichiers),
         "fichiers_ignores_ou_refuses": sum(b.statut != "importé" for b in res.fichiers),
         "oeuvres": len(res.oeuvres), "enregistrements": len(res.enregistrements),
-        "parts": len(res.parts), "revenus": len(res.revenus),
+        "parts": len(res.parts), "revenus": len(res.revenus), "manques": len(res.manques),
         **{f"revenus_{c.value}": sum(r.categorie == c for r in res.revenus) for c in Categorie},
     }
     return res

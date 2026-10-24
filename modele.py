@@ -49,6 +49,8 @@ class Categorie(str, Enum):
     synchro = "synchro"
     reseaux_sociaux = "reseaux_sociaux"
     retenue = "retenue"
+    frais = "frais"
+    avance = "avance"
 
 
 class Revenu(BaseModel):
@@ -69,6 +71,8 @@ class Revenu(BaseModel):
     montant: Optional[float] = None
     devise: Optional[str] = None
     beneficiaire: Optional[str] = None
+    contrat: Optional[str] = None          # numéro de contrat indiqué dans le relevé
+    taux_partage: Optional[str] = None     # taux de partage indiqué dans le relevé
     fichier: str
     ligne: int
 
@@ -83,10 +87,28 @@ class BilanFichier(BaseModel):
     messages: List[str] = Field(default_factory=list)
 
 
+class Gravite(str, Enum):
+    bloquant = "bloquant"
+    important = "important"
+    a_completer = "à compléter"
+
+
+class Manque(BaseModel):
+    """Contrôle des manques : ce qui manque dans les fichiers déposés, et ce qu'il faut demander au client."""
+    gravite: Gravite
+    sujet: str
+    constat: str
+    action: str
+    nombre: int = 0
+    montant: Optional[float] = None        # argent concerné, quand il est connu
+    exemples: List[str] = Field(default_factory=list)
+
+
 class Import(BaseModel):
     oeuvres: List[Oeuvre] = Field(default_factory=list)
     enregistrements: List[Enregistrement] = Field(default_factory=list)
     parts: List[Part] = Field(default_factory=list)
     revenus: List[Revenu] = Field(default_factory=list)
     fichiers: List[BilanFichier] = Field(default_factory=list)
+    manques: List[Manque] = Field(default_factory=list)
     resume: Dict[str, int] = Field(default_factory=dict)

@@ -1,13 +1,12 @@
 """
-Traqy · Calculs des modules Valeur et Projection (repris de l'ancien Colab Leakr, résultats inchangés).
+Traqy · Calculs des modules Valeur et Projection (repris de l'ancien Colab, résultats inchangés).
 
 Valeur     : chiffre d'affaires réel d'un album depuis sa sortie, d'après les relevés du distributeur.
 Projection : prolongation de la courbe jusqu'à la date de fin d'exploitation, avec un test à rebours.
 Estimation : CA à partir des écoutes publiques, quand le client n'a pas encore de relevés.
              Aucun taux par défaut : le client saisit son taux. Le résultat est toujours une estimation.
 
-Les informations privées (contrats, taux de partage, frais) sont rangées à part
-et ne doivent jamais apparaître dans un document remis au client.
+Les contrats, taux de partage, frais et avances du client sont lus et renvoyés avec le reste.
 """
 import hashlib
 import io
@@ -81,7 +80,7 @@ def _plat(h, H, W=3):
     return np.full(H, h[-3:].mean())
 
 def test_a_rebours(mm, fenetre, age_min=18):
-    """Cache les derniers mois, les prévoit avec le passé seul, compare au réel. Ne renvoie que des chiffres sans information privée."""
+    """Cache les derniers mois, les prévoit avec le passé seul, compare au réel."""
     m = mm.values.astype(float); n = len(m); lab = [str(p) for p in mm.index]
     M = [("Baisse régulière (méthode de cet audit)", lambda h, H: _decroissance(h, H, fenetre)),
          ("Baisse qui ralentit", _puissance), ("Niveau stable", _plat)]
@@ -127,18 +126,18 @@ def estimer_avant_releves(A, avant, total_pub, par_jour, date_pub):
 
 def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.35, fenetre=12,
                     avec_video=False, sortie=None, ecoutes_publiques=0, ecoutes_jour=0, date_publique=None):
-    """Renvoie (résultat public, contrôles, informations privées)."""
-    ctl, prive = [], []
+    """Renvoie (résultat, contrôles, contrats et frais)."""
+    ctl, contrats = [], []
     today, fin = date.fromisoformat(aujourdhui), date.fromisoformat(fin)
     ctl.append(f"Types de lignes : {D['Type'].value_counts().to_dict()}")
     for t in ["Expense", "Advance", "Neighboring Rights"]:
         x = D[D["Type"] == t]
         if len(x):
-            prive.append(f"{t} : {x['Revenu'].sum():.2f} (somme brute, hors CA)")
+            contrats.append(f"{t} : {x['Revenu'].sum():.2f} (somme brute, hors CA)")
     if "Numéro de contrat" in D:
-        prive.append(f"Contrats : {sorted(D['Numéro de contrat'].dropna().unique())}")
+        contrats.append(f"Contrats : {sorted(D['Numéro de contrat'].dropna().unique())}")
     if "Taux" in D:
-        prive.append(f"Taux de partage vus : {list(D['Taux'].dropna().unique()[:6])}")
+        contrats.append(f"Taux de partage vus : {list(D['Taux'].dropna().unique()[:6])}")
 
     # 1) Périmètre : ventes numériques + physiques du produit audité
     ventes = D[D["Type"].isin(TYPES_VENTES)]
@@ -149,7 +148,7 @@ def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.
         raise ErreurReleves("Aucune ligne pour ce produit. Titres disponibles : " +
                             str(list(ventes["Titre du produit / Description"].value_counts().head(10).index)))
     hors = ventes.drop(A.index)
-    prive.append(f"CA hors périmètre (autres produits, vidéos) : {hors['Revenu'].sum():.2f}")
+    contrats.append(f"CA hors périmètre (autres produits, vidéos) : {hors['Revenu'].sum():.2f}")
 
     A["mois"] = pd.to_datetime(A["Date de reporting"], format="%d/%m/%Y").dt.to_period("M")
     A["mois_op"] = pd.to_datetime(A["Date dopération"], format="%d/%m/%Y", errors="coerce").dt.to_period("M")
@@ -245,7 +244,7 @@ def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.
     ctl.append("Test à rebours : " + ("effectué sur %d mois d'historique" % R["backtest"]["mois"] if R["backtest"]["ok"] else "non concluant (historique trop court)"))
     ctl.append(f"CA réalisé : {realise:,.0f} | à venir : {R['avenir']:,.0f} | total : {R['total']:,.0f}")
     ctl.append(f"Fourchette : {lo_total:,.0f} à {hi_total:,.0f}")
-    return R, ctl, prive
+    return R, ctl, contrats
 
 
 # --- Mode estimation (sans relevés) --------------------------------------------------

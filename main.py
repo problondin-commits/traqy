@@ -384,7 +384,6 @@ async def produits_des_releves(fichiers: List[UploadFile] = File(...)):
     D, controle = await lire_fichiers(fichiers)
     return {"produits": calculs.lister_produits(D), "controles": controle}
 
-# Les informations privées (contrats, taux de partage, frais) ne sont jamais renvoyées
 @app.post("/api/v1/valeur")
 async def valeur_et_projection(
     fichiers: List[UploadFile] = File(...),
@@ -411,12 +410,12 @@ async def valeur_et_projection(
         verifier_date(date_publique, "Date de la page Kworb")
     D, controle = await lire_fichiers(fichiers)
     try:
-        resultat, controles, _prive = calculs.calculer_valeur(D, produits, fin, jour.isoformat(), baisse_min, baisse_max,
-                                                               fenetre, avec_video, sortie,
-                                                               ecoutes_publiques, ecoutes_jour, date_publique)
+        resultat, controles, contrats = calculs.calculer_valeur(D, produits, fin, jour.isoformat(), baisse_min, baisse_max,
+                                                                fenetre, avec_video, sortie,
+                                                                ecoutes_publiques, ecoutes_jour, date_publique)
     except calculs.ErreurReleves as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {"resultat": resultat, "controles": controle + controles}
+    return {"resultat": resultat, "controles": controle + controles, "contrats_et_frais": contrats}
 
 
 # ---------- Mode estimation (sans relevés) : taux saisis par le client ----------
