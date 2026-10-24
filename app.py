@@ -11,8 +11,8 @@ def euros(montant):
 def nombre(valeur):
     return f"{valeur:,}".replace(",", " ")
 
-def fourchette(bas, haut):
-    return euros(bas) if round(bas, 2) == round(haut, 2) else f"{euros(bas)} – {euros(haut)}"
+def montant(valeur):
+    return "Non calculé (taux non fourni)" if valeur is None else euros(valeur)
 
 st.set_page_config(page_title="Traqy", layout="wide")
 
@@ -27,14 +27,17 @@ isrc = st.sidebar.text_input("Code ISRC (facultatif)", placeholder="Ex : FR12326
 iswc = st.sidebar.text_input("Code ISWC (facultatif)", placeholder="Ex : T-123456789-0").strip().upper()
 streams_reels = st.sidebar.number_input("Écoutes mesurées", min_value=0, value=0, step=1000)
 streams_declares = st.sidebar.number_input("Écoutes déclarées", min_value=0, value=0, step=1000)
-NOTORIETES = {"Artiste indépendant": "independant", "Artiste connu": "connu", "Major ou tube": "major"}
-notoriete = st.sidebar.selectbox("Notoriété de l'artiste", list(NOTORIETES.keys()),
-                                 help="Sert à estimer la valeur d'une publicité non autorisée.")
-propre_taux = st.sidebar.checkbox("Utiliser mon propre taux par écoute",
-                                  help="Sinon, Traqy applique son barème : 0,003 € à 0,005 € par écoute.")
-taux = None
-if propre_taux:
-    taux = st.sidebar.number_input("Redevance par écoute (€)", min_value=0.0, max_value=1.0, value=0.003, step=0.001, format="%.4f")
+# Taux du client : laissés vides, les montants ne sont pas calculés (preuve seule)
+st.sidebar.header("Vos taux (facultatif)")
+st.sidebar.caption("Traqy n'applique aucun taux par défaut. Les montants obtenus sont des estimations.")
+taux = st.sidebar.number_input("Redevance par écoute (€)", min_value=0.0, max_value=1.0, value=None, step=0.001, format="%.4f")
+taux_client = {
+    "leak_per_view": st.sidebar.number_input("Fuite : valeur par vue (€)", min_value=0.0, max_value=1.0, value=None, step=0.001, format="%.4f"),
+    "youtube_per_view": st.sidebar.number_input("YouTube : valeur par vue (€)", min_value=0.0, max_value=1.0, value=None, step=0.001, format="%.4f"),
+    "tiktok_per_video": st.sidebar.number_input("TikTok : valeur par vidéo (€)", min_value=0.0, max_value=100.0, value=None, step=0.001, format="%.4f"),
+    "meta_per_use": st.sidebar.number_input("Instagram / Facebook : valeur par utilisation (€)", min_value=0.0, max_value=100.0, value=None, step=0.001, format="%.4f"),
+    "commercial_fee": st.sidebar.number_input("Publicité non autorisée : forfait par usage (€)", min_value=0.0, value=None, step=100.0),
+}
 
 if artiste and titre:
     st.subheader(f"{artiste} – {titre}")
@@ -121,7 +124,7 @@ def preparer_donnees():
         "actual_streams": int(streams_reels),
         "reported_streams": int(streams_declares),
         "royalty_rate": taux,
-        "artist_tier": NOTORIETES[notoriete],
+        "client_rates": taux_client,
         "incidents": incidents,
         "iswc": iswc or None,
         "rights_holders": [
@@ -163,13 +166,13 @@ if resultat:
     resume = audit["summary"]
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Écoutes non déclarées", nombre(finance["hidden_streams_detected"]))
+    col1.metric("Écoutes non déclarées", nombre(finance["undeclared_streams"]))
     col2.metric("Usages non autorisés", resume["total_incidents"])
     col3.metric("Audience des usages (vues)", nombre(resume["total_views"]))
     col4, col5 = st.columns(2)
-    col4.metric("Redevances non perçues (estimation)", fourchette(finance["missing_money_low_euros"], finance["missing_money_high_euros"]))
-    col5.metric("Impact estimé des usages", fourchette(resume["estimated_impact_low_euros"], resume["estimated_impact_high_euros"]))
-    st.caption(f"Calcul : {audit['rate_card']}. Le détail des taux et des sources figure dans le rapport PDF.")
+    col4.metric("Redevances non perçues (estimation)", montant(finance["unpaid_royalties_euros"]))
+    col5.metric("Valeur des usages (estimation)", montant(resume["estimated_impact_euros"]))
+    st.caption(f"Calcul : {audit['rates_source']}. Le détail des taux figure dans le rapport PDF.")
 
     st.markdown("#### Répartition par plateforme")
     st.table([{"Plateforme": p, "Incidents": n} for p, n in resume["incidents_by_platform"].items()])
@@ -178,7 +181,7 @@ if resultat:
         st.markdown("#### Dossier de preuves")
         st.table([
             {"Réf.": p["evidence_id"], "Plateforme": p["platform"], "Type": p["label"], "Lien": p["post_url"],
-             "Identifiant": p["post_id"], "Vues": nombre(p["views"]), "Impact": fourchette(p["estimated_impact_low_euros"], p["estimated_impact_high_euros"]),
+             "Identifiant": p["post_id"], "Vues": nombre(p["views"]), "Impact": montant(p["estimated_impact_euros"]),
              "Méthode": p["calculation_method"]}
             for p in audit["evidence"]
         ])

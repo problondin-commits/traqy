@@ -34,15 +34,15 @@ def lire_racine():
 
 @app.post("/full-report/")
 def generate_full_report(data: FullReportRequest):
-    hidden_streams = max(0, data.actual_streams - data.reported_streams)
-    missing_money = hidden_streams * data.royalty_rate
+    undeclared_streams = max(0, data.actual_streams - data.reported_streams)
+    unpaid_royalties = undeclared_streams * data.royalty_rate
     detected_infractions = []
     for inf in data.infractions:
-        inf_type = "Version modifiée non autorisée (Sped Up / Slowed)" if inf.is_modified_version else "Leak détecté"
+        inf_type = "Version modifiée non autorisée (Sped Up / Slowed)" if inf.is_modified_version else "Fuite d'un titre non commercialisé"
         detected_infractions.append({"platform": inf.platform, "infraction": inf_type})
     return {
         "track": data.title,
-        "financial_audit": {"hidden_streams_detected": hidden_streams, "estimated_missing_money_euros": round(missing_money, 2)},
+        "financial_audit": {"undeclared_streams": undeclared_streams, "estimated_unpaid_royalties_euros": round(unpaid_royalties, 2)},
         "security_audit": {"total_infractions_found": len(detected_infractions), "details": detected_infractions},
         "message": "Rapport d'audit global de synthèse généré avec succès !"
     }
@@ -80,16 +80,19 @@ class Incident(BaseModel):
     shares: int = Field(ge=0, default=0)
     videos_count: int = Field(ge=1, default=1)
 
-class Notoriete(str, Enum):
-    independant = "independant"
-    connu = "connu"
-    major = "major"
+# Taux saisis par le client : Traqy n'applique aucun taux par défaut
+class TauxClient(BaseModel):
+    leak_per_view: Optional[float] = Field(default=None, ge=0, le=1)
+    youtube_per_view: Optional[float] = Field(default=None, ge=0, le=1)
+    tiktok_per_video: Optional[float] = Field(default=None, ge=0, le=100)
+    meta_per_use: Optional[float] = Field(default=None, ge=0, le=100)
+    commercial_fee: Optional[float] = Field(default=None, ge=0)
 
 class SocialAuditRequest(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     isrc: Optional[str] = Field(default=None, pattern=r"^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$")
     royalty_rate: Optional[float] = Field(default=None, ge=0, le=1)
-    artist_tier: Notoriete = Notoriete.independant
+    client_rates: TauxClient = Field(default_factory=TauxClient)
     incidents: List[Incident] = Field(default_factory=list, max_length=500)
 
 # Retrouve l'identifiant du post à partir du lien (Instagram, TikTok, YouTube, X, Facebook)
@@ -106,48 +109,27 @@ def extraire_id(url):
             return trouve.group(1)
     return "non identifié"
 
-# Barème Traqy par défaut : fourchettes (bas, haut) en euros, tirées de sources publiques
-# Détail et sources : document « Traqy – Barème d'impact par défaut »
-BAREME_TRAQY = {
-    "version": "Barème Traqy – octobre 2026",
-    "streaming": (0.003, 0.005),      # par écoute (TuneCore, Royalty Exchange)
-    "fuite": (0.001, 0.005),          # par vue, hypothèse : une vue = une écoute perdue
-    "youtube": (0.0005, 0.002),       # par vue monétisée, Content ID (Ditto Music)
-    "tiktok": (0.004, 0.01),          # par vidéo qui utilise le son (Ditto Music)
-    "meta": (0.002, 0.006),           # par utilisation, Instagram et Facebook (Ditto Music)
-    "x": (0.0, 0.0),                  # aucune source publique : preuve seule
-    "pub": {                          # forfait par usage (Swell, Foxi, relevés réels)
-        "independant": (500, 12000),
-        "connu": (12000, 40000),
-        "major": (50000, 300000),
-    },
-}
-SOURCES_BAREME = "TuneCore, Royalty Exchange, Ditto Music, Swell, Foxi (pages consultées le 23/10/2026)."
-LIBELLES_NOTORIETE = {"independant": "artiste indépendant", "connu": "artiste connu", "major": "major ou tube"}
+SANS_TAUX = "Taux non fourni par le client : preuve seule"
+SOURCE_TAUX = "Taux communiqués par le client – montants estimés"
 
-def taux_streaming(data):
-    if data.royalty_rate is not None:
-        return (data.royalty_rate, data.royalty_rate)
-    return BAREME_TRAQY["streaming"]
-
-# Chaque type d'usage a sa propre règle de calcul ; renvoie (bas, haut, méthode)
+# Chaque type d'usage a sa propre règle de calcul ; renvoie (montant ou None, méthode)
 def calculer_impact(inc, data):
+    t = data.client_rates
     if inc.incident_type == TypeIncident.usage_commercial:
-        bas, haut = BAREME_TRAQY["pub"][data.artist_tier.value]
-        return bas, haut, f"Forfait de licence publicitaire ({LIBELLES_NOTORIETE[data.artist_tier.value]})"
-    if inc.incident_type == TypeIncident.fuite:
-        bas, haut = BAREME_TRAQY["fuite"]
-        return inc.views * bas, inc.views * haut, "Vues × taux par écoute (écoutes perdues)"
-    if inc.platform == Plateforme.youtube:
-        bas, haut = BAREME_TRAQY["youtube"]
-        return inc.views * bas, inc.views * haut, "Vues × taux Content ID"
-    if inc.platform == Plateforme.tiktok:
-        bas, haut = BAREME_TRAQY["tiktok"]
-        return inc.videos_count * bas, inc.videos_count * haut, "Vidéos utilisant le son × taux TikTok"
-    if inc.platform in (Plateforme.instagram, Plateforme.facebook):
-        bas, haut = BAREME_TRAQY["meta"]
-        return inc.videos_count * bas, inc.videos_count * haut, "Utilisations du son × taux Meta"
-    return 0.0, 0.0, "Aucune rémunération publique connue sur X : preuve seule"
+        valeur, quantite, methode = t.commercial_fee, 1, "Forfait de licence publicitaire du client"
+    elif inc.incident_type == TypeIncident.fuite:
+        valeur, quantite, methode = t.leak_per_view, inc.views, "Vues × taux par vue du client"
+    elif inc.platform == Plateforme.youtube:
+        valeur, quantite, methode = t.youtube_per_view, inc.views, "Vues × taux Content ID du client"
+    elif inc.platform == Plateforme.tiktok:
+        valeur, quantite, methode = t.tiktok_per_video, inc.videos_count, "Vidéos utilisant le son × taux TikTok du client"
+    elif inc.platform in (Plateforme.instagram, Plateforme.facebook):
+        valeur, quantite, methode = t.meta_per_use, inc.videos_count, "Utilisations du son × taux Meta du client"
+    else:
+        return None, "Aucun taux applicable sur X : preuve seule"
+    if valeur is None:
+        return None, SANS_TAUX
+    return valeur * quantite, methode
 
 @app.post("/api/v1/social-audit")
 def social_audit(data: SocialAuditRequest):
@@ -157,7 +139,7 @@ def calculer_audit_social(data: SocialAuditRequest):
     par_plateforme = {p.value: 0 for p in Plateforme}
     preuves = []
     for i, inc in enumerate(data.incidents, start=1):
-        bas, haut, methode = calculer_impact(inc, data)
+        impact, methode = calculer_impact(inc, data)
         par_plateforme[inc.platform.value] += 1
         preuves.append({
             "evidence_id": f"EV-{i:04d}",
@@ -170,11 +152,10 @@ def calculer_audit_social(data: SocialAuditRequest):
             "views": inc.views,
             "shares": inc.shares,
             "videos_count": inc.videos_count,
-            "estimated_impact_low_euros": round(bas, 2),
-            "estimated_impact_high_euros": round(haut, 2),
-            "estimated_impact_euros": round((bas + haut) / 2, 2),
+            "estimated_impact_euros": None if impact is None else round(impact, 2),
             "calculation_method": methode,
         })
+    chiffres = [p["estimated_impact_euros"] for p in preuves if p["estimated_impact_euros"] is not None]
     return {
         "audit_id": f"audit_{uuid.uuid4().hex[:12]}",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -184,12 +165,11 @@ def calculer_audit_social(data: SocialAuditRequest):
             "total_incidents": len(preuves),
             "total_views": sum(p["views"] for p in preuves),
             "total_shares": sum(p["shares"] for p in preuves),
-            "estimated_impact_low_euros": round(sum(p["estimated_impact_low_euros"] for p in preuves), 2),
-            "estimated_impact_high_euros": round(sum(p["estimated_impact_high_euros"] for p in preuves), 2),
-            "estimated_impact_euros": round(sum(p["estimated_impact_euros"] for p in preuves), 2),
+            "estimated_impact_euros": round(sum(chiffres), 2) if chiffres else None,
+            "incidents_without_rate": len(preuves) - len(chiffres),
             "incidents_by_platform": par_plateforme,
         },
-        "rate_card": BAREME_TRAQY["version"] + (" (taux par écoute fourni par le client)" if data.royalty_rate is not None else ""),
+        "rates_source": SOURCE_TAUX,
         "evidence": preuves,
     }
 
@@ -231,22 +211,30 @@ def euros(montant):
 def nombre(valeur):
     return f"{valeur:,}".replace(",", " ")
 
-def fourchette(bas, haut):
-    return euros(bas) if round(bas, 2) == round(haut, 2) else f"{euros(bas)} – {euros(haut)}"
+def montant(valeur):
+    return "Non calculé (taux non fourni)" if valeur is None else euros(valeur)
+
+def somme(*valeurs):
+    connues = [v for v in valeurs if v is not None]
+    return round(sum(connues), 2) if connues else None
 
 def taux(valeur):
     return f"{valeur:g}".replace(".", ",") + " €"
+
+def regle(valeur, unite):
+    return "Taux non fourni : preuve seule" if valeur is None else f"{unite} × {taux(valeur)}"
 
 def creer_csv_preuves(audit):
     sortie = io.StringIO()
     ecrivain = csv.writer(sortie, delimiter=";")
     ecrivain.writerow(["Identifiant preuve", "Plateforme", "Type", "Lien", "Identifiant du post",
                        "Date de détection (UTC)", "Vues", "Partages", "Vidéos utilisant le son",
-                       "Impact bas (€)", "Impact haut (€)", "Méthode de calcul"])
+                       "Impact estimé (€)", "Méthode de calcul"])
     for p in audit["evidence"]:
+        impact = p["estimated_impact_euros"]
         ecrivain.writerow([p["evidence_id"], p["platform"], p["label"], p["post_url"], p["post_id"],
                            p["detected_at"], p["views"], p["shares"], p["videos_count"],
-                           str(p["estimated_impact_low_euros"]).replace(".", ","), str(p["estimated_impact_high_euros"]).replace(".", ","),
+                           "" if impact is None else str(impact).replace(".", ","),
                            p["calculation_method"]])
     return sortie.getvalue().encode("utf-8-sig")
 
@@ -267,7 +255,7 @@ def creer_xml_metadonnees(data, audit):
     ET.indent(racine)
     return ET.tostring(racine, encoding="utf-8", xml_declaration=True)
 
-def creer_pdf_rapport(data, audit, streams_caches, manque_bas, manque_haut):
+def creer_pdf_rapport(data, audit, ecoutes_non_declarees, redevances):
     tampon = io.BytesIO()
     doc = SimpleDocTemplate(tampon, pagesize=A4, title="Traqy - Rapport d'audit", author="Traqy")
     styles = getSampleStyleSheet()
@@ -290,12 +278,12 @@ def creer_pdf_rapport(data, audit, streams_caches, manque_bas, manque_haut):
     ]
     synthese = Table([
         ["Indicateur", "Valeur"],
-        ["Écoutes non déclarées", nombre(streams_caches)],
-        ["Redevances non perçues (estimation)", fourchette(manque_bas, manque_haut)],
+        ["Écoutes non déclarées", nombre(ecoutes_non_declarees)],
+        ["Redevances non perçues (estimation)", montant(redevances)],
         ["Usages non autorisés détectés", str(resume["total_incidents"])],
         ["Audience cumulée des usages (vues)", nombre(resume["total_views"])],
-        ["Impact estimé des usages", fourchette(resume["estimated_impact_low_euros"], resume["estimated_impact_high_euros"])],
-        ["Total estimé à récupérer", fourchette(manque_bas + resume["estimated_impact_low_euros"], manque_haut + resume["estimated_impact_high_euros"])],
+        ["Valeur des usages (estimation)", montant(resume["estimated_impact_euros"])],
+        ["Total à récupérer (estimation)", montant(somme(redevances, resume["estimated_impact_euros"]))],
     ], colWidths=[300, 170])
     synthese.setStyle(style_tableau)
     contenu += [synthese, Spacer(1, 16), Paragraph("Usages non autorisés par plateforme", styles["Heading3"])]
@@ -308,7 +296,7 @@ def creer_pdf_rapport(data, audit, streams_caches, manque_bas, manque_haut):
         lignes = [["Réf.", "Plateforme", "Type", "Lien", "Vues", "Impact estimé"]]
         for p in audit["evidence"]:
             lignes.append([p["evidence_id"], p["platform"], Paragraph(p["label"], petit), Paragraph(p["post_url"], petit),
-                           nombre(p["views"]), Paragraph(fourchette(p["estimated_impact_low_euros"], p["estimated_impact_high_euros"]), petit)])
+                           nombre(p["views"]), Paragraph(montant(p["estimated_impact_euros"]), petit)])
         detail = Table(lignes, colWidths=[45, 55, 115, 140, 50, 90], repeatRows=1)
         detail.setStyle(style_tableau)
         contenu.append(detail)
@@ -321,50 +309,50 @@ def creer_pdf_rapport(data, audit, streams_caches, manque_bas, manque_haut):
         ], colWidths=[180, 120, 100, 70], repeatRows=1)
         ayants.setStyle(style_tableau)
         contenu.append(ayants)
-    b = BAREME_TRAQY
-    taux_ecoute = taux_streaming(data)
-    contenu += [Spacer(1, 16), Paragraph(f"Méthode de calcul – {audit['rate_card']}", styles["Heading3"])]
+    t = data.client_rates
+    contenu += [Spacer(1, 16), Paragraph("Méthode de calcul – taux communiqués par le client", styles["Heading3"])]
     methode = Table([
-        ["Type d'usage", "Règle appliquée (bas – haut)"],
-        ["Écoutes non déclarées", f"Écoutes × {taux(taux_ecoute[0])} – {taux(taux_ecoute[1])} par écoute"],
-        ["Fuite d'un titre non commercialisé", f"Vues × {taux(b['fuite'][0])} – {taux(b['fuite'][1])}"],
-        ["Usage sur YouTube (Content ID)", f"Vues × {taux(b['youtube'][0])} – {taux(b['youtube'][1])}"],
-        ["Usage sur TikTok", f"Vidéos × {taux(b['tiktok'][0])} – {taux(b['tiktok'][1])}"],
-        ["Usage sur Instagram / Facebook", f"Utilisations × {taux(b['meta'][0])} – {taux(b['meta'][1])}"],
-        ["Usage sur X", "Aucune rémunération publique connue : preuve seule"],
-        [f"Publicité non autorisée ({LIBELLES_NOTORIETE[data.artist_tier.value]})",
-         f"Forfait de {fourchette(*b['pub'][data.artist_tier.value])} par usage"],
+        ["Type d'usage", "Règle appliquée"],
+        ["Écoutes non déclarées", regle(data.royalty_rate, "Écoutes")],
+        ["Fuite d'un titre non commercialisé", regle(t.leak_per_view, "Vues")],
+        ["Usage sur YouTube (Content ID)", regle(t.youtube_per_view, "Vues")],
+        ["Usage sur TikTok", regle(t.tiktok_per_video, "Vidéos")],
+        ["Usage sur Instagram / Facebook", regle(t.meta_per_use, "Utilisations")],
+        ["Usage sur X", "Aucun taux applicable : preuve seule"],
+        ["Publicité non autorisée",
+         "Taux non fourni : preuve seule" if t.commercial_fee is None else f"Forfait de {euros(t.commercial_fee)} par usage"],
     ], colWidths=[200, 270], repeatRows=1)
     methode.setStyle(style_tableau)
     contenu += [methode, Spacer(1, 20), Paragraph(
-        f"Fourchettes estimées à partir des données communiquées. Sources du barème : {SOURCES_BAREME} "
-        "Document confidentiel.", styles["Italic"])]
+        "Tous les montants sont des estimations, calculées uniquement à partir des taux communiqués par le client. "
+        "Traqy n'applique aucun taux par défaut. Document confidentiel.", styles["Italic"])]
     doc.build(contenu)
     return tampon.getvalue()
 
+# Sans taux saisi par le client, les redevances ne sont pas chiffrées
 def calculer_redevances(data):
-    streams_caches = max(0, data.actual_streams - data.reported_streams)
-    taux_bas, taux_haut = taux_streaming(data)
-    return streams_caches, round(streams_caches * taux_bas, 2), round(streams_caches * taux_haut, 2)
+    ecoutes_non_declarees = max(0, data.actual_streams - data.reported_streams)
+    if data.royalty_rate is None:
+        return ecoutes_non_declarees, None
+    return ecoutes_non_declarees, round(ecoutes_non_declarees * data.royalty_rate, 2)
 
 @app.post("/api/v1/audit")
 def audit_complet(data: AuditPackRequest):
     audit = calculer_audit_social(data)
-    streams_caches, manque_bas, manque_haut = calculer_redevances(data)
+    ecoutes_non_declarees, redevances = calculer_redevances(data)
     audit["royalties"] = {
-        "hidden_streams_detected": streams_caches,
-        "missing_money_low_euros": manque_bas,
-        "missing_money_high_euros": manque_haut,
+        "undeclared_streams": ecoutes_non_declarees,
+        "unpaid_royalties_euros": redevances,
     }
     return audit
 
 @app.post("/api/v1/audit-pack")
 def audit_pack(data: AuditPackRequest):
     audit = calculer_audit_social(data)
-    streams_caches, manque_bas, manque_haut = calculer_redevances(data)
+    ecoutes_non_declarees, redevances = calculer_redevances(data)
     zip_memoire = io.BytesIO()
     with zipfile.ZipFile(zip_memoire, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("Rapport_Audit_Traqy.pdf", creer_pdf_rapport(data, audit, streams_caches, manque_bas, manque_haut))
+        archive.writestr("Rapport_Audit_Traqy.pdf", creer_pdf_rapport(data, audit, ecoutes_non_declarees, redevances))
         archive.writestr("Dossier_Preuves_Traqy.csv", creer_csv_preuves(audit))
         archive.writestr("Metadonnees_Oeuvre_Traqy.xml", creer_xml_metadonnees(data, audit))
     return Response(

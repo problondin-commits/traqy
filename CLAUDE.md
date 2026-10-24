@@ -81,4 +81,5 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - Le dossier contient main.py (API) et app.py (ancienne interface Streamlit).
 - La migration de Leakr vers Traqy est faite.
 - Étape 1 terminée (24/10/2026) : Git 2.55 et Node.js 24 (LTS) installés. Compte GitHub : problondin-commits. Dossier envoyé dans le dépôt privé github.com/problondin-commits/traqy (branche main).
-- Prochaine tâche : étape 2 du plan (finir le moteur), pas encore commencée.
+- Étape 2 en cours. Fait (24/10/2026) : barème par défaut retiré du moteur. Les montants viennent seulement des taux saisis par le client ; sans taux, l'usage est gardé comme preuve, sans montant. Vocabulaire corrigé (« non perçus », plus de « perdues » ni « Leak »). app.py adapté.
+- Prochaine tâche : déplacer les calculs du Colab Leakr dans le moteur (Tom doit fournir le fichier du Colab).
