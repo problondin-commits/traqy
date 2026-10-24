@@ -106,4 +106,5 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - S.Pri Noir : les relevés de l'album « État d'esprit » ne sont pas sur l'ordinateur (sans doute restés dans l'ancien projet claude.ai). Décision de Tom (24/10/2026) : on reste sur « La Cour des Miracles ». Dossier prévu pour de futurs relevés : Bureau > API_TRAQY > donnees_clients (bloqué par .gitignore).
 - À conseiller à Tom : accepter le contrat de traitement des données (DPA) de Supabase, exigé par le RGPD dès qu'on stocke des données personnelles de clients.
 - Visite quotidienne de la base : .github/workflows/reveil-base.yml (GitHub Actions, chaque jour à 6 h 17). Elle a besoin du secret DATABASE_URL dans GitHub (dépôt traqy > Settings > Secrets and variables > Actions), à saisir par Tom.
-- Prochaine tâche : vérifier que la visite quotidienne fonctionne, puis étape 4 (API en ligne chez Render, Francfort, protégée par une clé d'API).
+- Étape 3 terminée (24/10/2026) : secret DATABASE_URL ajouté dans GitHub par Tom ; visite quotidienne testée avec succès (coche verte).
+- Prochaine tâche : étape 4 (API en ligne chez Render, Francfort, protégée par une clé d'API).
