@@ -1,0 +1,24 @@
+# Traqy · Visite quotidienne de la base Supabase, pour que l'offre gratuite ne la mette jamais en pause.
+# GitHub lance cette tâche chaque jour. L'adresse de la base est lue dans le secret DATABASE_URL du dépôt
+# (GitHub > dépôt traqy > Settings > Secrets and variables > Actions), jamais écrite ici.
+name: Réveil quotidien de la base
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # chaque jour à 6 h 17 (heure de Londres)
+  workflow_dispatch:         # bouton « Run workflow » pour la lancer à la main
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Petite visite de la base
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Le secret DATABASE_URL n'est pas renseigné dans GitHub."
+            exit 1
+          fi
+          psql "$DATABASE_URL" -tAc "select 'Clients enregistrés : ' || count(*) from traqy.clients"

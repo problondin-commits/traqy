@@ -135,6 +135,8 @@ class Fuite(BaseModel):
 
 
 class Import(BaseModel):
+    import_id: Optional[int] = None        # numéro dans la base, une fois enregistré
+    client: Optional[str] = None
     oeuvres: List[Oeuvre] = Field(default_factory=list)
     enregistrements: List[Enregistrement] = Field(default_factory=list)
     parts: List[Part] = Field(default_factory=list)

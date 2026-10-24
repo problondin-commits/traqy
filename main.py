@@ -14,6 +14,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+import base
 import calculs
 import importation
 
@@ -445,9 +446,32 @@ def estimation(data: EstimationRequest):
 # ---------- Import du catalogue et des relevés (traducteurs dans importation.py) ----------
 
 @app.post("/api/v1/import")
-async def importer_fichiers(fichiers: List[UploadFile] = File(...)):
-    """Reçoit des fichiers CSV, Excel ou ZIP et les traduit dans le modèle interne Traqy."""
-    return importation.importer([(f.filename or "fichier", await f.read()) for f in fichiers])
+async def importer_fichiers(fichiers: List[UploadFile] = File(...),
+                            client: Optional[str] = Form(None, min_length=1, max_length=200)):
+    """Reçoit des fichiers CSV, Excel ou ZIP et les traduit dans le modèle interne Traqy.
+    Avec un nom de client, l'import est enregistré dans la base de données."""
+    res = importation.importer([(f.filename or "fichier", await f.read()) for f in fichiers])
+    if client:
+        if not base.configuree():
+            raise HTTPException(status_code=503, detail="Base de données non configurée : l'import n'a pas été enregistré.")
+        res.client = client.strip()
+        res.import_id = base.enregistrer_import(res.client, res)
+    return res
+
+@app.get("/api/v1/imports")
+def liste_des_imports(client: Optional[str] = None):
+    if not base.configuree():
+        raise HTTPException(status_code=503, detail="Base de données non configurée.")
+    return base.lister_imports(client)
+
+@app.get("/api/v1/imports/{import_id}")
+def relire_import(import_id: int):
+    if not base.configuree():
+        raise HTTPException(status_code=503, detail="Base de données non configurée.")
+    imp = base.lire_import(import_id)
+    if imp is None:
+        raise HTTPException(status_code=404, detail="Import introuvable.")
+    return imp
 
 @app.get("/api/v1/modele-catalogue")
 def modele_catalogue():

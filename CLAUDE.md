@@ -6,6 +6,7 @@ Lis cette note en entier au début de chaque conversation.
 - Tom est le fondateur de Traqy. Il n'est pas technique : il code pour la première fois.
 - Réponses courtes. Phrases simples. 5 lignes maximum quand c'est possible.
 - Aucun mot technique sans l'expliquer. Ne suppose jamais qu'il sait où se trouve un bouton : dis exactement où cliquer.
+- Consigne de Tom (24/10/2026) : ne jamais citer un dossier, un fichier, un onglet, un bouton, un menu ou un programme sans dire ce que c'est ET où le trouver (chemin complet ou endroit exact de l'écran).
 - Pas de tableaux. Étapes numérotées.
 - N'anticipe pas : réponds à ce qu'il demande, puis attends.
 - Rien n'est écrit ni modifié sans son « go » explicite.
@@ -98,4 +99,9 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - Fait (24/10/2026) : couche Fuites (fuites.py), lancée à chaque import (champ « fuites »), classée par argent en jeu. 5 règles, chiffrées uniquement avec les données du client : 1. solde jamais payé (montant lu, pas une estimation) ; 2. revenus qui s'arrêtent (moyenne des derniers paiements × périodes manquées, estimation) ; 3. parts incomplètes (revenus de l'œuvre × part manquante, estimation) ; 4. écoutes sans droits d'auteur (non chiffré) ; 5. œuvre sans aucun revenu (non chiffré, retirée du contrôle des manques). Les soldes de comptes sont maintenant importés (format « Relevé Traqy · soldes »).
 - Sur Luidji : 3 fuites, 55 378 € chiffrés. Solde Concord 064639 : 41 404,36 € (30 626,24 € fin 2025 S2 + 10 778,12 € de royalties S1 2026), conforme aux notes. Part auteur Luidji chez Concord : 13 970 € estimés, MAIS les relevés Concord du compte 064638 après le S1 2023 sont absents : à vérifier avant d'en parler comme d'une fuite.
 - Pour plus tard : comparer écoutes publiques (Kworb) et écoutes déclarées, une fois Kworb validé ou retiré.
-- Prochaine tâche : tests sur de vrais relevés (dernier point de l'étape 2), puis étape 3 (base de données).
+- Étape 2 : il ne reste que les tests sur de vrais relevés d'origine, à faire dès qu'un client en enverra.
+- Étape 3 (24/10/2026) : base PostgreSQL chez Supabase, projet « traqy », région Central EU (Frankfurt), organisation « Traqy », offre gratuite, compte créé avec GitHub. Connexion par le « Session pooler ». L'adresse de connexion est dans le fichier secret .env (Bureau > API_TRAQY > .env, bloqué par .gitignore) ; le mot de passe de la base est gardé par Tom.
+- base.py : tables dans le schéma « traqy » (pas « public », donc non exposées par l'interface publique de Supabase) : clients, imports, oeuvres, enregistrements, parts, revenus, soldes, bilans_fichiers, manques, fuites. Colonnes tirées de modele.py. /api/v1/import enregistre l'import quand on donne un nom de client ; /api/v1/imports et /api/v1/imports/{n} pour relire. Testé avec des données inventées (enregistré, relu à l'identique, effacé).
+- Données de Luidji : jamais envoyées dans la base (accord de confidentialité mentionné dans les notes). Demander à Tom avant d'y mettre des données réelles de client.
+- Visite quotidienne de la base : .github/workflows/reveil-base.yml (GitHub Actions, chaque jour à 6 h 17). Elle a besoin du secret DATABASE_URL dans GitHub (dépôt traqy > Settings > Secrets and variables > Actions), à saisir par Tom.
+- Prochaine tâche : vérifier que la visite quotidienne fonctionne, puis étape 4 (API en ligne chez Render, Francfort, protégée par une clé d'API).
