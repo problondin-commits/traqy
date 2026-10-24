@@ -1,0 +1,19 @@
+# Fichiers Python générés automatiquement
+__pycache__/
+*.pyc
+
+# Environnements Python
+.venv/
+venv/
+
+# Secrets : ne jamais envoyer sur GitHub
+.env
+.env.*
+
+# Interface (plus tard)
+node_modules/
+.next/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
