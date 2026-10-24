@@ -1,5 +1,6 @@
-// Éléments d'écran partagés : en-tête de page, tuile chiffrée, pastille de gravité.
+// Éléments d'écran partagés : en-tête de page, tuile chiffrée, pastille de gravité, message d'indisponibilité.
 import type { ReactNode } from "react";
+import { CloudOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Gravite } from "@/lib/types";
 
@@ -30,6 +31,20 @@ const STYLE_GRAVITE: Record<Gravite, string> = {
   important: "bg-warning/15 text-warning",
   "à compléter": "bg-muted text-muted-foreground",
 };
+
+export function Indisponible({ message }: { message: string | null }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-16 text-center">
+      <CloudOff className="size-8 text-muted-foreground" />
+      <p className="font-medium">Données indisponibles pour le moment</p>
+      <p className="max-w-md text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+export function Vide({ message }: { message: string }) {
+  return <p className="rounded-xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">{message}</p>;
+}
 
 export function PastilleGravite({ gravite }: { gravite: Gravite }) {
   return (

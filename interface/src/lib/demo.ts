@@ -1,11 +1,13 @@
 // Mode démo : données entièrement inventées (« Label Démo »), aucune donnée réelle de client.
 // Elles ont la même forme que les réponses de l'API, pour pouvoir brancher l'interface ensuite.
-import type { BilanFichier, Fuite, LigneCatalogue, Manque, Rapport } from "./types";
+import type { BilanFichier, Fuite, LigneCatalogue, Manque, Rapport, Vue } from "./types";
+
+type FuiteDemo = Omit<Fuite, "id" | "decision">;
 
 export const CLIENT_DEMO = "Label Démo";
 export const DATE_DEPOT_DEMO = "24 octobre 2026";
 
-export const fichiersDemo: BilanFichier[] = [
+const fichiersDemo: BilanFichier[] = [
   { fichier: "catalogue_label_demo.xlsx › Ayants droit", format: "Catalogue Traqy · ayants droit et parts", statut: "importé", lignes_importees: 42, lignes_ignorees: 0, messages: [] },
   { fichier: "catalogue_label_demo.xlsx › Œuvres", format: "Catalogue Traqy · œuvres", statut: "importé", lignes_importees: 12, lignes_ignorees: 0, messages: [] },
   { fichier: "sacem_repartitions_2024_2026.csv", format: "Relevé Traqy · droits d'auteur", statut: "importé", lignes_importees: 118, lignes_ignorees: 2, messages: ["Ligne 57 : aucun montant, non importée comme revenu.", "Ligne 88 : aucun montant, non importée comme revenu."] },
@@ -14,7 +16,7 @@ export const fichiersDemo: BilanFichier[] = [
   { fichier: "notes_reunion.docx", format: null, statut: "ignoré", lignes_importees: 0, lignes_ignorees: 0, messages: ["Type de fichier non pris en charge (CSV, Excel ou ZIP attendu)."] },
 ];
 
-export const manquesDemo: Manque[] = [
+const manquesDemo: Manque[] = [
   {
     gravite: "important", sujet: "Revenus impossibles à rattacher", nombre: 12, montant: 3480.4,
     constat: "12 lignes n'ont ni ISRC, ni ISWC, ni titre exact : impossible de les rattacher à une œuvre (3 480,40 €).",
@@ -47,7 +49,7 @@ export const manquesDemo: Manque[] = [
   },
 ];
 
-export const fuitesDemo: Fuite[] = [
+const fuitesDemo: FuiteDemo[] = [
   {
     regle: "Solde jamais payé", oeuvre: null, iswc: null, isrc: null, payeur: "Éditions Horizon",
     montant: 18420.5, estimation: false,
@@ -85,7 +87,7 @@ export const fuitesDemo: Fuite[] = [
   },
 ];
 
-export const catalogueDemo: LigneCatalogue[] = [
+const catalogueDemo: LigneCatalogue[] = [
   { titre: "Minuit Pile", artiste: "Nova Lune", iswc: "T-901.234.567-1", isrc: "FRZ012500011", ayants_droit: 4, parts_dep: 100, revenus: 14820 },
   { titre: "Ciel Ouvert", artiste: "Nova Lune", iswc: "T-901.234.580-3", isrc: "FRZ012500014", ayants_droit: 3, parts_dep: 87.5, revenus: 9000 },
   { titre: "Ligne 7", artiste: "Kenzo Rive", iswc: "T-901.234.599-8", isrc: "FRZ012500019", ayants_droit: 3, parts_dep: 100, revenus: 6240 },
@@ -98,7 +100,18 @@ export const catalogueDemo: LigneCatalogue[] = [
   { titre: "Archipel", artiste: "Kenzo Rive", iswc: null, isrc: null, ayants_droit: 2, parts_dep: 100, revenus: 0 },
 ];
 
-export const rapportsDemo: Rapport[] = [
+// En démo, les alertes ont des numéros négatifs : les décisions restent dans le navigateur.
+export const vueDemo: Vue = {
+  import_id: null,
+  client: CLIENT_DEMO,
+  cree_le: null,
+  fichiers: fichiersDemo,
+  manques: manquesDemo,
+  fuites: fuitesDemo.map((f, i) => ({ ...f, id: -(i + 1), decision: null })),
+  catalogue: catalogueDemo,
+};
+
+export const rapports: Rapport[] = [
   { titre: "Rapport d'audit", description: "Synthèse, fuites classées par argent en jeu, manques et méthode de calcul.", format: "PDF" },
   { titre: "Dossier de preuves", description: "Chaque fuite avec les lignes de relevés qui la prouvent.", format: "CSV" },
   { titre: "Liste des œuvres et des parts", description: "Catalogue contrôlé : œuvres, ISWC, ISRC, ayants droit et parts.", format: "XML" },

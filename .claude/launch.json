@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "interface", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "moteur",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "uvicorn", "main:app", "--port", "8000"],
+      "port": 8000
     }
   ]
 }

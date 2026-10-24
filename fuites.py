@@ -54,7 +54,9 @@ def soldes_non_payes(imp):
         sortie.append(Fuite(
             regle=REGLES[0], payeur=payeur, montant=round(du, 2), estimation=False, methode=methode + ".",
             action=f"Réclamer le versement du solde à {payeur or 'ce payeur'}.",
-            preuves=[f"{s.fichier}, ligne {s.ligne} : {s.periode}, ouverture {euros(s.ouverture or 0)}, royalties {euros(s.royalties or 0)}, "
+            preuves=[f"{s.fichier}, ligne {s.ligne} : {s.periode}, "
+                     f"ouverture {euros(s.ouverture) if s.ouverture is not None else 'non indiquée'}, "
+                     f"royalties {euros(s.royalties) if s.royalties is not None else 'non indiquées'}, "
                      f"clôture {euros(s.cloture) if s.cloture is not None else 'non indiquée'}" for s in liste[-4:]]))
     return sortie
 
