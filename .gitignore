@@ -10,6 +10,13 @@ venv/
 .env
 .env.*
 
+# Données de clients (relevés, catalogues) : restent sur l'ordinateur, jamais sur GitHub
+donnees_clients/
+releves/
+*.xlsx
+*.xls
+*.zip
+
 # Interface (plus tard)
 node_modules/
 .next/

@@ -15,6 +15,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 import calculs
+import importation
 
 app = FastAPI(title="Traqy API", version="1.1.0")
 
@@ -440,3 +441,16 @@ def estimation(data: EstimationRequest):
         raise HTTPException(status_code=400, detail="La date de fin doit être après la date du jour.")
     return calculs.estimer([a.model_dump() for a in data.albums], data.fin.isoformat(), jour.isoformat(),
                            data.taux_pour_1000, data.majoration_physique, data.baisse_annuelle)
+
+
+# ---------- Import du catalogue et des relevés (traducteurs dans importation.py) ----------
+
+@app.post("/api/v1/import")
+async def importer_fichiers(fichiers: List[UploadFile] = File(...)):
+    """Reçoit des fichiers CSV, Excel ou ZIP et les traduit dans le modèle interne Traqy."""
+    return importation.importer([(f.filename or "fichier", await f.read()) for f in fichiers])
+
+@app.get("/api/v1/modele-catalogue")
+def modele_catalogue():
+    return Response(content=importation.modele_catalogue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="Modele_Catalogue_Traqy.csv"'})

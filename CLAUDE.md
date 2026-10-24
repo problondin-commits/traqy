@@ -86,4 +86,8 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - Colab de référence : Téléchargements > Traqy_migration_Leakr > reference_calcul > NEIA_audit_Colab.ipynb.
 - Décision de Tom (24/10/2026) : les 4 coefficients sans source (0,884 ; 1,064 ; 1,12 ; 0,87) sont retirés. L'estimation d'avant les relevés donne un seul montant (le montant central du Colab), marqué « estimation », source Kworb citée, non compté dans le total. Fait et vérifié.
 - Décision de Tom (24/10/2026) : Kworb accepté pour l'instant, à condition d'être cité comme source. RAPPEL À FAIRE À TOM : retirer Kworb avant toute remise à un client.
-- Prochaine tâche : import du catalogue et des relevés (le format lu aujourd'hui est celui d'un seul distributeur).
+- Fait (24/10/2026) : import du catalogue et des relevés. modele.py = modèle interne unique (œuvre, enregistrement, part, revenu, période). importation.py = un traducteur par format : catalogue Traqy (= format Leakr des ayants droit et parts), relevé distributeur du Colab, relevés Leakr (écoutes, droits d'auteur, synchro, réseaux sociaux, retenues). Accepte CSV, Excel et ZIP. Entrées API : /api/v1/import et /api/v1/modele-catalogue. requirements.txt ajouté.
+- Test sur les vrais fichiers Luidji / S.Pri Noir (en local, jamais sur GitHub) : 358 parts, 914 revenus, total SACEM 428 255,19 € identique au LISEZMOI.
+- Limites connues : le classeur Excel Luidji (onglets faits main) n'est pas reconnu ; aucun relevé d'origine (Believe, Universal, Concord, SACEM) n'est disponible. Question posée à Tom : en a-t-il ?
+- Données de clients : dossier de migration dans Téléchargements > Traqy_migration_Leakr > donnees_clients. Le .gitignore bloque les fichiers Excel, ZIP et les dossiers donnees_clients/ et releves/.
+- Prochaine tâche : contrôle des manques (Traqy liste ce qui manque dans les fichiers déposés).
