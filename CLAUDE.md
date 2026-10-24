@@ -80,5 +80,5 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 ## 9. Où on en est
 - Le dossier contient main.py (API) et app.py (ancienne interface Streamlit).
 - La migration de Leakr vers Traqy est faite.
-- Étape 1 en cours : Git 2.55 et Node.js 24 (LTS) sont installés (24/10/2026).
-- Prochaine tâche : créer le compte GitHub (Tom), puis mettre ce dossier sur GitHub.
+- Étape 1 terminée (24/10/2026) : Git 2.55 et Node.js 24 (LTS) installés. Compte GitHub : problondin-commits. Dossier envoyé dans le dépôt privé github.com/problondin-commits/traqy (branche main).
+- Prochaine tâche : étape 2 du plan (finir le moteur), pas encore commencée.
