@@ -12,7 +12,7 @@ Formats reconnus aujourd'hui :
   - Catalogue Traqy · ayants droit et parts (une ligne par ayant droit et par œuvre)
   - Catalogue Traqy · œuvres (une ligne par œuvre, avec ISWC, code SACEM ou ISRC)
   - Relevé distributeur détaillé (format lu par l'ancien Colab)
-  - Relevés au format Traqy : écoutes, droits d'auteur, synchro et publicité, réseaux sociaux, retenues
+  - Relevés au format Traqy : écoutes, droits d'auteur, synchro et publicité, réseaux sociaux, retenues, soldes de comptes
 """
 import calendar
 import hashlib
@@ -27,7 +27,8 @@ from datetime import date
 import pandas as pd
 
 import controle
-from modele import BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu
+import fuites
+from modele import BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu, Solde
 
 MOIS_NOMS = {m: i for i, m in enumerate(["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
                                           "août", "septembre", "octobre", "novembre", "décembre"], start=1)}
@@ -52,6 +53,9 @@ SYNONYMES = {
     "code_sacem": ["code_oeuvre_sacem", "code_oeuvre", "sacem_work_code"],
     "isrc": ["isrc_version_principale", "code_isrc", "isrc_code", "isrc_principal"],
     "projet": ["album", "project", "release"],
+    "solde_ouverture": ["solde_d_ouverture", "solde_d_ouverture_crediteur_debiteur", "opening_balance"],
+    "solde_cloture": ["solde_de_cloture", "closing_balance"],
+    "royalties_periode": ["royalties_de_la_periode", "royalties", "earnings"],
 }
 ALIAS = {synonyme: nom for nom, liste in SYNONYMES.items() for synonyme in liste}
 
@@ -295,7 +299,28 @@ def traduire_catalogue(d, nom, res, bilan):
         res.oeuvres.append(Oeuvre(titre=titre, iswc=iswc, code_sacem=texte(ligne.get("code_sacem")), artiste=texte(ligne.get("artiste"))))
         if isrc:
             res.enregistrements.append(Enregistrement(titre=titre, isrc=isrc.upper(), projet=texte(ligne.get("projet")),
-                                                      artiste=texte(ligne.get("artiste"))))
+                                                      artiste=texte(ligne.get("artiste")), iswc=iswc))
+        bilan.lignes_importees += 1
+
+def traduire_soldes(d, nom, res, bilan):
+    """Soldes de comptes (éditeur, distributeur). Le payeur se lit dans la colonne « payeur » ou dans « compte_<payeur> »."""
+    col_compte = next((c for c in d.columns if c.startswith("compte")), None)
+    payeur_colonne = col_compte[len("compte_"):].capitalize() if col_compte and col_compte.startswith("compte_") else None
+    for i, ligne in d.iterrows():
+        try:
+            ouverture, royalties, cloture = (nombre(ligne.get(c), c) for c in ("solde_ouverture", "royalties_periode", "solde_cloture"))
+        except ErreurLigne as e:
+            noter(bilan, f"Ligne {i + 2} ignorée : {e}.")
+            continue
+        if cloture is None and royalties is None:
+            noter(bilan, f"Ligne {i + 2} ignorée : ni solde de clôture ni royalties.")
+            continue
+        periode = texte(ligne.get("periode"))
+        debut, fin = lire_periode(periode)
+        res.soldes.append(Solde(payeur=texte(ligne.get("payeur")) or payeur_colonne,
+                                compte=(texte(ligne[col_compte]) if col_compte else None) or "compte non indiqué",
+                                periode=periode, debut=debut, fin=fin, ouverture=ouverture, royalties=royalties, cloture=cloture,
+                                devise=texte(ligne.get("devise")), fichier=nom, ligne=i + 2))
         bilan.lignes_importees += 1
 
 def traduire_oeuvres(d, nom, res, bilan):
@@ -308,7 +333,7 @@ def traduire_oeuvres(d, nom, res, bilan):
         res.oeuvres.append(Oeuvre(titre=titre, iswc=iswc, code_sacem=code, artiste=texte(ligne.get("artiste"))))
         if isrc:
             res.enregistrements.append(Enregistrement(titre=titre, isrc=isrc.upper(), projet=texte(ligne.get("projet")),
-                                                      artiste=texte(ligne.get("artiste"))))
+                                                      artiste=texte(ligne.get("artiste")), iswc=iswc))
         bilan.lignes_importees += 1
 
 def noter(bilan, message):
@@ -327,10 +352,12 @@ def reconnaitre(colonnes):
     for nom_format, requises, _, _ in RELEVES_TRAQY:
         if requises <= colonnes:
             return nom_format
+    if {"solde_ouverture", "solde_cloture"} <= colonnes:
+        return "Relevé Traqy · soldes"
     if {"titre", "ayant_droit"} <= colonnes:
         return "Catalogue Traqy · ayants droit et parts"
-    if {"repartition", "annee"} <= colonnes or {"compte_concord", "solde_ouverture"} <= colonnes:
-        return "Synthèse (totaux ou soldes)"
+    if {"repartition", "annee"} <= colonnes:
+        return "Synthèse (totaux par répartition)"
     par_annee = any(re.fullmatch(r"\d{4}", c) for c in colonnes)   # tableau de montants en colonnes par année
     if "titre" in colonnes and {"iswc", "code_sacem", "isrc"} & colonnes and "montant" not in colonnes and not par_annee:
         return "Catalogue Traqy · œuvres"
@@ -355,7 +382,9 @@ def importer(fichiers):
                 bilan.messages.append("Format non reconnu. Colonnes trouvées : " + ", ".join(origine[:12]))
             elif format_.startswith("Synthèse"):
                 bilan.statut = "ignoré"
-                bilan.messages.append("Fichier de totaux ou de soldes : non importé, les lignes détaillées des relevés suffisent.")
+                bilan.messages.append("Fichier de totaux : non importé, les lignes détaillées des relevés suffisent.")
+            elif format_ == "Relevé Traqy · soldes":
+                traduire_soldes(d, nom_tab, res, bilan)
             elif format_ == "Catalogue Traqy · ayants droit et parts":
                 avant = len(res.parts)
                 traduire_catalogue(d, nom_tab, res, bilan)
@@ -377,12 +406,15 @@ def importer(fichiers):
     res.oeuvres = fusionner(res.oeuvres, lambda o: controle.cle_iswc(o.iswc) or o.code_sacem or controle.cle_titre(o.titre))
     res.enregistrements = fusionner(res.enregistrements, lambda e: e.isrc)
     res.parts = sans_doublons_entre_fichiers(parts_par_tableau)
+    res.soldes = fusionner(res.soldes, lambda s: (s.payeur, s.compte, s.periode))
     res.manques = controle.controler(res)
+    res.fuites = fuites.detecter(res)
     res.resume = {
         "fichiers_importes": sum(b.statut == "importé" for b in res.fichiers),
         "fichiers_ignores_ou_refuses": sum(b.statut != "importé" for b in res.fichiers),
         "oeuvres": len(res.oeuvres), "enregistrements": len(res.enregistrements),
-        "parts": len(res.parts), "revenus": len(res.revenus), "manques": len(res.manques),
+        "parts": len(res.parts), "revenus": len(res.revenus), "soldes": len(res.soldes),
+        "manques": len(res.manques), "fuites": len(res.fuites),
         **{f"revenus_{c.value}": sum(r.categorie == c for r in res.revenus) for c in Categorie},
     }
     return res

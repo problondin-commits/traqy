@@ -25,6 +25,22 @@ class Enregistrement(BaseModel):
     isrc: str
     projet: Optional[str] = None
     artiste: Optional[str] = None
+    iswc: Optional[str] = None             # œuvre enregistrée, quand le catalogue le dit
+
+
+class Solde(BaseModel):
+    """Solde d'un compte chez un éditeur ou un distributeur, sur une période (positif : en faveur du client)."""
+    payeur: Optional[str] = None
+    compte: str
+    periode: Optional[str] = None
+    debut: Optional[date] = None
+    fin: Optional[date] = None
+    ouverture: Optional[float] = None
+    royalties: Optional[float] = None
+    cloture: Optional[float] = None
+    devise: Optional[str] = None
+    fichier: str
+    ligne: int
 
 
 class Part(BaseModel):
@@ -104,11 +120,27 @@ class Manque(BaseModel):
     exemples: List[str] = Field(default_factory=list)
 
 
+class Fuite(BaseModel):
+    """Droits non perçus : ce qui n'a pas été versé, combien (quand c'est chiffrable) et à qui le réclamer."""
+    regle: str
+    oeuvre: Optional[str] = None
+    iswc: Optional[str] = None
+    isrc: Optional[str] = None
+    payeur: Optional[str] = None
+    montant: Optional[float] = None        # None : non chiffré
+    estimation: bool = True                # False : montant lu tel quel dans un relevé
+    methode: str
+    action: str
+    preuves: List[str] = Field(default_factory=list)
+
+
 class Import(BaseModel):
     oeuvres: List[Oeuvre] = Field(default_factory=list)
     enregistrements: List[Enregistrement] = Field(default_factory=list)
     parts: List[Part] = Field(default_factory=list)
     revenus: List[Revenu] = Field(default_factory=list)
+    soldes: List[Solde] = Field(default_factory=list)
     fichiers: List[BilanFichier] = Field(default_factory=list)
     manques: List[Manque] = Field(default_factory=list)
+    fuites: List[Fuite] = Field(default_factory=list)
     resume: Dict[str, int] = Field(default_factory=dict)

@@ -108,16 +108,7 @@ def controler(imp):
                             f"pour {euros(sum(r.montant or 0 for r in hors))}.",
                     action="Ajouter ces œuvres au catalogue avec leurs ayants droit et leurs parts.",
                     exemples=exemples(r.titre for r in hors))
-        payees_iswc = {cle_iswc(r.iswc) for r in droits if r.iswc}
-        payees_titre = {cle_titre(r.titre) for r in droits}
-        sans_revenu = [l[0].titre for l in par_oeuvre.values()
-                       if not ((l[0].iswc and cle_iswc(l[0].iswc) in payees_iswc) or cle_titre(l[0].titre) in payees_titre)]
-        if sans_revenu:
-            ajouter(gravite=Gravite.important, sujet="Œuvres du catalogue sans aucun revenu", nombre=len(sans_revenu),
-                    constat=f"{len(sans_revenu)} œuvres du catalogue n'apparaissent dans aucun relevé de droits d'auteur. "
-                            "C'est une piste de droits non perçus.",
-                    action="Vérifier que ces œuvres sont bien déclarées, et demander les relevés manquants.",
-                    exemples=exemples(sans_revenu))
+        # Les œuvres du catalogue sans aucun revenu sont traitées dans la couche Fuites (fuites.py).
 
     # --- Relevés -------------------------------------------------------------------------
     suites = defaultdict(set)
