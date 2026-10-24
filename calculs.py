@@ -101,10 +101,32 @@ def test_a_rebours(mm, fenetre, age_min=18):
     return out
 
 
+# --- Estimation de la période AVANT les relevés (écoutes publiques Kworb) ------------
+# Un seul montant, toujours présenté comme une estimation, non compté dans le total.
+# Les 4 coefficients de fourchette du Colab (0,884 ; 1,064 ; 1,12 ; 0,87) sont retirés : aucune source.
+SOURCE_KWORB = "Kworb (écoutes Spotify publiques, saisies à la main)"
+
+def estimer_avant_releves(A, avant, total_pub, par_jour, date_pub):
+    st = A[A["Type dexploitation"] == "Streaming"]
+    sp = st[st["Plateforme"] == "Spotify"]
+    if sp.empty or total_pub <= 0: return None
+    ecoutes_rel = float(sp["Ventes nettes"].sum())
+    fin_op = sp["mois_op"].max()
+    jours_apres = max(0, (date.fromisoformat(date_pub) - ajouter_mois(date(fin_op.year, fin_op.month, 1), 1)).days) if date_pub else 0
+    manque = total_pub - ecoutes_rel - par_jour * jours_apres
+    if manque <= 0: return None
+    pm = sp.groupby("mois")["Revenu"].sum().iloc[:12].sum() / sp.groupby("mois")["Ventes nettes"].sum().iloc[:12].sum()  # € par écoute, 12 premiers mois relevés
+    part = float(sp["Revenu"].sum() / A["Revenu"].sum())  # part de Spotify dans le CA de l'album
+    return {"nature": "estimation", "source": SOURCE_KWORB + (f", page du {date_pub}" if date_pub else ""),
+            "montant": float(manque * pm / part), "ecoutes_manquantes": float(manque), "ecoutes_relevees": ecoutes_rel,
+            "taux_1000": float(pm * 1000), "part_spotify": part,
+            "mois": int(avant["mois"]), "moyenne_mois": float(manque / avant["mois"])}
+
+
 # --- Valeur et Projection ----------------------------------------------------------
 
 def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.35, fenetre=12,
-                    avec_video=False, sortie=None):
+                    avec_video=False, sortie=None, ecoutes_publiques=0, ecoutes_jour=0, date_publique=None):
     """Renvoie (résultat public, contrôles, informations privées)."""
     ctl, prive = [], []
     today, fin = date.fromisoformat(aujourdhui), date.fromisoformat(fin)
@@ -214,7 +236,11 @@ def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.
     nb_avant = (mm.index.min() - sortie).n
     R["avant_releves"] = {"mois": int(nb_avant), "debut": str(sortie), "fin": str(mm.index.min() - 1)} if nb_avant >= 2 else None
     if R["avant_releves"]:
-        ctl.append(f"ATTENTION : album sorti en {sortie}, relevés disponibles à partir de {mm.index.min()} : {nb_avant} mois non couverts (non estimés).")
+        ctl.append(f"ATTENTION : album sorti en {sortie}, relevés disponibles à partir de {mm.index.min()} : {nb_avant} mois non couverts.")
+    R["estim_avant"] = estimer_avant_releves(A, R["avant_releves"], ecoutes_publiques, ecoutes_jour, date_publique) if R["avant_releves"] else None
+    if R["estim_avant"]:
+        e = R["estim_avant"]
+        ctl.append(f"Estimation avant relevés ({e['source']}) : {e['ecoutes_manquantes']/1e6:.1f} M d'écoutes manquantes, {e['montant']:,.0f}, non comptée dans le total.")
     R["backtest"] = test_a_rebours(mm, fenetre)
     ctl.append("Test à rebours : " + ("effectué sur %d mois d'historique" % R["backtest"]["mois"] if R["backtest"]["ok"] else "non concluant (historique trop court)"))
     ctl.append(f"CA réalisé : {realise:,.0f} | à venir : {R['avenir']:,.0f} | total : {R['total']:,.0f}")

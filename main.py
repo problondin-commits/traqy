@@ -395,6 +395,9 @@ async def valeur_et_projection(
     fenetre: int = Form(12, ge=3, le=60),
     avec_video: bool = Form(False),
     sortie: Optional[str] = Form(None),
+    ecoutes_publiques: float = Form(0, ge=0, description="Écoutes Spotify cumulées de l'album (Kworb)"),
+    ecoutes_jour: float = Form(0, ge=0, description="Écoutes Spotify par jour de l'album (Kworb)"),
+    date_publique: Optional[str] = Form(None, description="Date de mise à jour de la page Kworb, AAAA-MM-JJ"),
 ):
     jour = verifier_date(aujourdhui, "Date du jour") if aujourdhui else date.today()
     if verifier_date(fin, "Date de fin") <= jour:
@@ -403,10 +406,13 @@ async def valeur_et_projection(
         raise HTTPException(status_code=400, detail="La baisse minimale doit être inférieure à la baisse maximale.")
     if sortie and not re.fullmatch(r"[0-9]{4}-[0-9]{2}", sortie[:7]):
         raise HTTPException(status_code=400, detail="Mois de sortie attendu au format AAAA-MM.")
+    if date_publique:
+        verifier_date(date_publique, "Date de la page Kworb")
     D, controle = await lire_fichiers(fichiers)
     try:
         resultat, controles, _prive = calculs.calculer_valeur(D, produits, fin, jour.isoformat(), baisse_min, baisse_max,
-                                                               fenetre, avec_video, sortie)
+                                                               fenetre, avec_video, sortie,
+                                                               ecoutes_publiques, ecoutes_jour, date_publique)
     except calculs.ErreurReleves as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"resultat": resultat, "controles": controle + controles}
