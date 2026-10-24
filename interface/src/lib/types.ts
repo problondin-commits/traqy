@@ -62,6 +62,39 @@ export type Vue = {
 
 export type ImportResume = { id: number; client: string; cree_le: string };
 
+export type MoisMontant = { mois: string; valeur: number }; // mois au format AAAA-MM
+
+// Réponse de /api/v1/imports/{n}/projection et /api/v1/projection (projection.py)
+export type Projection = {
+  nature: "estimation";
+  methode: string;
+  debut: string;
+  dernier: string;
+  aujourdhui: string;
+  fin: string;
+  historique: MoisMontant[];
+  prevision: MoisMontant[];
+  realise: number;
+  avenir: number;
+  total: number;
+  total_bas: number;
+  total_haut: number;
+  baisse_mesuree: number;
+  baisse_min: number;
+  baisse_max: number;
+  hors_fourchette: boolean;
+  niveau_mensuel: number;
+  periodes: { label: string; valeur: number }[];
+  fiabilite: {
+    ok: boolean;
+    mois: number;
+    h6?: { tests: number; methodes: Record<string, { ecart_moyen: number; biais: number; pire: number }> };
+    h3?: { tests: number; methodes: Record<string, { ecart_moyen: number; biais: number; pire: number }> };
+  };
+};
+
+export type ReglagesProjection = { fin: string; baisse_min: number; baisse_max: number };
+
 export type Rapport = {
   titre: string;
   description: string;

@@ -28,7 +28,7 @@ Lis cette note en entier au début de chaque conversation.
    - Projection : revenus à venir sur 5 ans, 10 ans ou plus, à terme pays par pays.
    - Surveillance : usages non autorisés sur les réseaux, uniquement par des voies légales (pas d'aspiration de TikTok).
 4. Une sortie unique : alertes classées par argent en jeu, rapport d'audit avec dossier de preuves, exports officiels.
-5. Une interface en cinq écrans : Dépôt, Contrôle des manques, Catalogue, Alertes, Rapports. Le client dépose ses fichiers puis valide des alertes.
+5. Une interface en six écrans : Dépôt, Contrôle des manques, Catalogue, Alertes, Projection, Rapports (écran Projection ajouté à la demande de Tom le 24/10/2026). Le client dépose ses fichiers puis valide des alertes.
 
 ## 4. Exports officiels
 - En entrée : DSR, CRD, RDR-R.
@@ -48,6 +48,7 @@ Lis cette note en entier au début de chaque conversation.
 - Ton des documents : commercial. Le mot « IA » n'apparaît pas dans les documents remis aux clients.
 - Vocabulaire : dire « non perçus », jamais « perdus » ni « bloqués ».
 - Le produit s'appelle uniquement « Traqy ». « Gatekeeper » est un nom de code interne, jamais visible.
+- Pas de mandat : Traqy ne réclame jamais et ne touche jamais l'argent à la place du client. Le client réclame lui-même avec son Pack d'Audit. C'est ce qui distingue Traqy de Claimy. Les partenaires techniques (hébergement, reconnaissance audio) sont de simples fournisseurs, pas des mandats.
 - Nous sommes Traqy : ne plus parler de « Leakr » à Tom, ni dans le code, ni dans ce qui est visible. Dire « ancien Colab » ou « format Traqy ».
 - Contrats, taux de partage, frais et avances : ce sont les données du client. Traqy les importe comme le reste, sans les cacher ni les marquer « privé » (décision de Tom, 24/10/2026).
 
@@ -114,4 +115,7 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - Pour voir l'interface sur l'ordinateur : .claude/launch.json (serveur « interface », http://localhost:3000).
 - Fait (24/10/2026) : interface branchée sur le moteur. La clé d'API reste côté serveur de l'interface (interface/src/lib/api.ts, variables TRAQY_API_URL et TRAQY_API_KEY ; sur l'ordinateur : interface/.env.local, bloqué par .gitignore, qui pointe vers le moteur lancé en local sur le port 8000). Menu « Client » dans la barre de gauche (dernier import de chaque client + « Label Démo (démo) »), choix gardé dans un cookie. Dépôt réel (route /api/depot → /api/v1/import), décisions sur les alertes enregistrées dans la base (colonne « decision » de traqy.fuites ; nouvelles colonnes ajoutées automatiquement par base.py). Nouvelles entrées API : /api/v1/imports/{n}/vue et PUT /api/v1/fuites/{n}/decision. Écran « Chargement… » pendant le réveil du moteur. Vérifié dans le navigateur avec Luidji, S.Pri Noir, dépôt de test (effacé) et validation d'alerte (annulée ensuite). Construction finale (npm run build) : OK.
 - Pour voir l'interface sur l'ordinateur : lancer les serveurs « moteur » et « interface » de .claude/launch.json, puis http://localhost:3000.
-- Prochaine tâche : étape 6 (interface en ligne sur Vercel, avec TRAQY_API_URL = https://traqy-api.onrender.com et la clé de Render, + mode démo).
+- Fait (24/10/2026) : écran Projection (/projection). Moteur : projection.py construit la courbe mensuelle d'un client à partir de ses relevés importés (chaque revenu réparti sur sa période ; paiement SACEM daté d'un jour = intervalle depuis le paiement précédent ; exclus : cumuls, synchro, frais, avances, retenues), puis applique la même méthode que le Colab (calculs.projeter_courbe, extraite de calculer_valeur ; résultats Colab toujours identiques). Entrées API : GET /api/v1/imports/{n}/projection et POST /api/v1/projection (courbe libre, pour la démo). Écran : horizon 3/5/10/15 ans, baisse min/max réglables, tuiles (relevé, à venir, total, fourchette), graphique mensuel (relevé en barres pleines, prévision hachurée, vert #18A974 validé pour fond sombre), méthode, test sur le passé, tableau par période. Alerte affichée quand la baisse mesurée sort de la fourchette (cas de Luidji : 35,4 % par an). Résultats : S.Pri Noir 52 228 € à venir sur 5 ans ; Luidji 208 469 € ; toujours des estimations.
+- Décision en attente de l'accord de Tom (24/10/2026) : un testeur bêta ne doit jamais voir les vrais clients ni le menu « Client ». Proposé : menu réservé à Tom (administrateur), un espace par testeur avec compte, démo pour les visiteurs sans compte ; liens aux testeurs seulement après l'étape 7.
+- Lancer l'interface pour Tom : deux onglets de terminal, « python -m uvicorn main:app --port 8000 » (moteur) et « npm --prefix interface run dev » (interface), puis http://localhost:3000 dans son navigateur.
+- Prochaine tâche : étape 6 (interface en ligne sur Vercel, avec TRAQY_API_URL = https://traqy-api.onrender.com et la clé de Render, en mode démo uniquement tant que l'étape 7 n'est pas faite).

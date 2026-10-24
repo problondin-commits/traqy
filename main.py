@@ -20,6 +20,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 import base
 import calculs
 import importation
+import pandas as pd
+import projection
 import vues
 
 # Clé d'API : chaque appel doit l'envoyer dans l'en-tête X-API-Key. Elle est lue dans TRAQY_API_KEY
@@ -509,6 +511,48 @@ def vue_pour_interface(import_id: int):
         raise HTTPException(status_code=404, detail="Import introuvable.")
     cree_le = next((i["cree_le"] for i in base.lister_imports(imp.client) if i["id"] == import_id), None)
     return vues.vue(imp, cree_le)
+
+# ---------- Projection : revenus à venir d'après les relevés du client (projection.py) ----------
+
+def verifier_projection(fin, baisse_min, baisse_max):
+    if fin <= date.today():
+        raise HTTPException(status_code=400, detail="La date de fin doit être après aujourd'hui.")
+    if not (0 < baisse_min <= baisse_max < 1):
+        raise HTTPException(status_code=400, detail="Baisse annuelle attendue entre 0 et 100 %, la minimale avant la maximale.")
+
+@app.get("/api/v1/imports/{import_id}/projection")
+def projection_import(import_id: int, fin: date, baisse_min: float = 0.05, baisse_max: float = 0.35):
+    verifier_projection(fin, baisse_min, baisse_max)
+    if not base.configuree():
+        raise HTTPException(status_code=503, detail="Base de données non configurée.")
+    imp = base.lire_import(import_id)
+    if imp is None:
+        raise HTTPException(status_code=404, detail="Import introuvable.")
+    try:
+        return projection.projeter_import(imp, fin, date.today(), baisse_min, baisse_max)
+    except projection.HistoriqueInsuffisant as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+class MoisMontant(BaseModel):
+    mois: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}$")
+    valeur: float
+
+class ProjectionRequest(BaseModel):
+    historique: List[MoisMontant] = Field(min_length=1, max_length=600)
+    fin: date
+    baisse_min: float = 0.05
+    baisse_max: float = 0.35
+
+@app.post("/api/v1/projection")
+def projection_libre(data: ProjectionRequest):
+    """Projection d'une courbe mensuelle fournie directement (utilisée par le mode démo)."""
+    verifier_projection(data.fin, data.baisse_min, data.baisse_max)
+    serie = pd.Series({pd.Period(m.mois, "M"): m.valeur for m in data.historique}).sort_index()
+    serie = serie.reindex(pd.period_range(serie.index.min(), serie.index.max(), freq="M"), fill_value=0.0)
+    try:
+        return projection.projeter_serie(serie, data.fin, date.today(), data.baisse_min, data.baisse_max)
+    except projection.HistoriqueInsuffisant as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 class DecisionRequest(BaseModel):
     decision: Optional[str] = Field(default=None, description="« validée », « écartée », ou vide pour annuler")

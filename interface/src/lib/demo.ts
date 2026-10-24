@@ -100,6 +100,15 @@ const catalogueDemo: LigneCatalogue[] = [
   { titre: "Archipel", artiste: "Kenzo Rive", iswc: null, isrc: null, ayants_droit: 2, parts_dep: 100, revenus: 0 },
 ];
 
+// Chiffre d'affaires mensuel inventé (juillet 2023 à juin 2026) : un album qui démarre fort puis baisse doucement.
+export const historiqueDemo = Array.from({ length: 36 }, (_, i) => {
+  const annee = 2023 + Math.floor((i + 6) / 12);
+  const mois = ((i + 6) % 12) + 1;
+  const lancement = i < 3 ? [0.45, 1.25, 1.1][i] : 1;
+  const saison = 1 + 0.08 * Math.sin((i / 12) * 2 * Math.PI);
+  return { mois: `${annee}-${String(mois).padStart(2, "0")}`, valeur: Math.round(9800 * Math.exp(-0.022 * i) * lancement * saison) };
+});
+
 // En démo, les alertes ont des numéros négatifs : les décisions restent dans le navigateur.
 export const vueDemo: Vue = {
   import_id: null,

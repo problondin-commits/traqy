@@ -124,6 +124,54 @@ def estimer_avant_releves(A, avant, total_pub, par_jour, date_pub):
 
 # --- Valeur et Projection ----------------------------------------------------------
 
+def projeter_courbe(mm, realise, today, fin, baisse_min=0.05, baisse_max=0.35, fenetre=12):
+    """Projection d'une courbe de CA mensuel (série pandas indexée par mois) jusqu'à la date de fin.
+    Baisse mesurée sur les derniers mois, prolongée mois par mois, fourchette selon la baisse annuelle min / max."""
+    # Baisse mesurée sur les derniers mois complets
+    y = mm.iloc[-fenetre:]
+    t = np.arange(len(y))
+    b, a0 = np.polyfit(t, np.log(y.clip(lower=1).values), 1)
+    baisse = float(1 - np.exp(12 * b)); L = float(np.exp(a0 + b * (len(y) - 1)))
+
+    # Projection mois par mois, répartie par périodes
+    dernier = mm.index.max()
+    debut_gap = ajouter_mois(date(dernier.year, dernier.month, 1), 1)  # 1er du mois suivant le dernier relevé
+    bornes = [debut_gap, today]
+    k = 1
+    while True:
+        d = date(today.year + k, today.month, today.day)
+        if d >= fin: bornes.append(fin); break
+        bornes.append(d); k += 1
+    def projeter(kmensuel):
+        res = [0.0] * (len(bornes) - 1)
+        n, m0 = 1, debut_gap
+        while m0 < fin:
+            m1 = ajouter_mois(m0, 1); val = L * np.exp(kmensuel * n)
+            for i in range(len(bornes) - 1):
+                lo, hi = max(m0, bornes[i]), min(m1, bornes[i + 1])
+                if hi > lo: res[i] += val * (hi - lo).days / (m1 - m0).days
+            n += 1; m0 = m1
+        return res
+    per = projeter(b)
+    def plab(i):
+        d0, d1 = bornes[i], bornes[i + 1]
+        f = lambda d: f"{d.day} {MOIS[d.month-1]} {d.year}"
+        if i == 0: return f"{MOIS[d0.month-1]} {d0.year} – {f(d1)} (non relevé)"
+        return f"{f(d0)} – {f(d1)}"
+    def total_pour(baisse_ann):
+        return realise + sum(projeter(np.log(1 - baisse_ann) / 12))
+    # Courbe prévue mois par mois (pour les graphiques)
+    mois_prevus, n, m0 = [], 1, debut_gap
+    while m0 < fin:
+        mois_prevus.append({"mois": f"{m0.year}-{m0.month:02d}", "valeur": float(L * np.exp(b * n))})
+        n += 1; m0 = ajouter_mois(m0, 1)
+    return {
+        "baisse": baisse, "niveau_depart": L, "mois_mesures": len(y),
+        "par_periode": per, "periodes": [{"label": plab(i), "valeur": float(v)} for i, v in enumerate(per)],
+        "avenir": float(sum(per)), "total_bas": total_pour(baisse_max), "total_haut": total_pour(baisse_min),
+        "mois_prevus": mois_prevus,
+    }
+
 def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.35, fenetre=12,
                     avec_video=False, sortie=None, ecoutes_publiques=0, ecoutes_jour=0, date_publique=None):
     """Renvoie (résultat, contrôles, contrats et frais)."""
@@ -178,42 +226,11 @@ def calculer_valeur(D, produits, fin, aujourdhui, baisse_min=0.05, baisse_max=0.
         sortie = mo[mo >= 0.25 * mo.max()].index.min()
     ctl.append(f"Sortie retenue : {sortie} (détectée sur les dates d'opération ; à confirmer avec le client)")
 
-    # 3) Baisse mesurée sur les derniers mois complets
-    y = mm.iloc[-fenetre:]
-    t = np.arange(len(y))
-    b, a0 = np.polyfit(t, np.log(y.clip(lower=1).values), 1)
-    baisse = float(1 - np.exp(12 * b)); L = float(np.exp(a0 + b * (len(y) - 1)))
-    ctl.append(f"Baisse annuelle mesurée sur {len(y)} mois : {baisse*100:.1f} % ; niveau mensuel de départ : {L:.0f}")
-
-    # 4) Projection mois par mois, répartie par périodes
-    dernier = mm.index.max()
-    debut_gap = ajouter_mois(date(dernier.year, dernier.month, 1), 1)  # 1er du mois suivant le dernier relevé
-    bornes = [debut_gap, today]
-    k = 1
-    while True:
-        d = date(today.year + k, today.month, today.day)
-        if d >= fin: bornes.append(fin); break
-        bornes.append(d); k += 1
-    def projeter(kmensuel):
-        res = [0.0] * (len(bornes) - 1)
-        n, m0 = 1, debut_gap
-        while m0 < fin:
-            m1 = ajouter_mois(m0, 1); val = L * np.exp(kmensuel * n)
-            for i in range(len(bornes) - 1):
-                lo, hi = max(m0, bornes[i]), min(m1, bornes[i + 1])
-                if hi > lo: res[i] += val * (hi - lo).days / (m1 - m0).days
-            n += 1; m0 = m1
-        return res
-    per = projeter(b)
-    def plab(i):
-        d0, d1 = bornes[i], bornes[i + 1]
-        f = lambda d: f"{d.day} {MOIS[d.month-1]} {d.year}"
-        if i == 0: return f"{MOIS[d0.month-1]} {d0.year} – {f(d1)} (non relevé)"
-        return f"{f(d0)} – {f(d1)}"
-    periodes = [{"label": plab(i), "valeur": float(v)} for i, v in enumerate(per)]
-    def total_pour(baisse_ann):
-        return realise + sum(projeter(np.log(1 - baisse_ann) / 12))
-    lo_total, hi_total = total_pour(baisse_max), total_pour(baisse_min)
+    # 3) et 4) Baisse mesurée, puis projection mois par mois répartie par périodes
+    P = projeter_courbe(mm, realise, today, fin, baisse_min, baisse_max, fenetre)
+    baisse, L, dernier, per, periodes = P["baisse"], P["niveau_depart"], mm.index.max(), P["par_periode"], P["periodes"]
+    lo_total, hi_total = P["total_bas"], P["total_haut"]
+    ctl.append(f"Baisse annuelle mesurée sur {P['mois_mesures']} mois : {baisse*100:.1f} % ; niveau mensuel de départ : {L:.0f}")
 
     R = dict(
         produit=list(produits), aujourdhui=today.isoformat(), fin=fin.isoformat(),

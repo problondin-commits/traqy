@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BellRing, ClipboardCheck, FileText, Library, Loader2, Upload } from "lucide-react";
+import { BellRing, ClipboardCheck, FileText, Library, Loader2, TrendingUp, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { choisirClient } from "@/lib/actions";
 import type { Choix } from "@/lib/donnees";
@@ -33,6 +33,7 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes }: Props) 
     { href: "/manques", libelle: "Contrôle des manques", icone: ClipboardCheck, compteur: manques },
     { href: "/catalogue", libelle: "Catalogue", icone: Library },
     { href: "/alertes", libelle: "Alertes", icone: BellRing, compteur: alertes },
+    { href: "/projection", libelle: "Projection", icone: TrendingUp },
     { href: "/rapports", libelle: "Rapports", icone: FileText },
   ];
   return (

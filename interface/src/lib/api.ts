@@ -1,6 +1,6 @@
 // Lien avec le moteur Traqy. Ce fichier ne tourne que sur le serveur de l'interface :
 // la clé d'API (TRAQY_API_KEY) n'est jamais envoyée au navigateur.
-import type { ImportResume, Vue } from "./types";
+import type { ImportResume, MoisMontant, Projection, ReglagesProjection, Vue } from "./types";
 
 const URL_API = (process.env.TRAQY_API_URL ?? "").replace(/\/+$/, "");
 const CLE_API = process.env.TRAQY_API_KEY ?? "";
@@ -46,6 +46,20 @@ export function deciderFuite(fuiteId: number, decision: string | null) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ decision }),
+  });
+}
+
+export function lireProjection(importId: number, r: ReglagesProjection) {
+  const q = new URLSearchParams({ fin: r.fin, baisse_min: String(r.baisse_min), baisse_max: String(r.baisse_max) });
+  return appel<Projection>(`/api/v1/imports/${importId}/projection?${q}`);
+}
+
+/** Projection d'une courbe fournie directement (mode démo). */
+export function projeterCourbe(historique: MoisMontant[], r: ReglagesProjection) {
+  return appel<Projection>("/api/v1/projection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ historique, ...r }),
   });
 }
 
