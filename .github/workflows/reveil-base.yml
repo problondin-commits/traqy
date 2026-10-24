@@ -21,4 +21,6 @@ jobs:
             echo "Le secret DATABASE_URL n'est pas renseigné dans GitHub."
             exit 1
           fi
-          psql "$DATABASE_URL" -tAc "select 'Clients enregistrés : ' || count(*) from traqy.clients"
+          # Tolère un secret copié avec « DATABASE_URL= » devant, des guillemets ou des espaces
+          URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n' | sed -e 's/^[[:space:]]*DATABASE_URL=//' -e 's/^["'\'']//' -e 's/["'\'']$//' -e 's/[[:space:]]*$//')"
+          psql "$URL" -tAc "select 'Clients enregistrés : ' || count(*) from traqy.clients"
