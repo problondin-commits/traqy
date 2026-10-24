@@ -107,4 +107,7 @@ Ensuite : exports officiels, Surveillance des réseaux, Redis.
 - À conseiller à Tom : accepter le contrat de traitement des données (DPA) de Supabase, exigé par le RGPD dès qu'on stocke des données personnelles de clients.
 - Visite quotidienne de la base : .github/workflows/reveil-base.yml (GitHub Actions, chaque jour à 6 h 17). Elle a besoin du secret DATABASE_URL dans GitHub (dépôt traqy > Settings > Secrets and variables > Actions), à saisir par Tom.
 - Étape 3 terminée (24/10/2026) : secret DATABASE_URL ajouté dans GitHub par Tom ; visite quotidienne testée avec succès (coche verte).
-- Prochaine tâche : étape 4 (API en ligne chez Render, Francfort, protégée par une clé d'API).
+- Étape 4 terminée (24/10/2026) : API en ligne à https://traqy-api.onrender.com (Render, compte créé avec GitHub, offre gratuite, Francfort, service « traqy-api » créé par le Blueprint « traqy » à partir de render.yaml). Chaque envoi sur GitHub (branche main) remet le service à jour automatiquement.
+- Clé d'API : en-tête X-API-Key, obligatoire partout sauf la page d'accueil « / » (qui dit seulement si le service et la base répondent). Clé en ligne : créée par Render, visible dans Render > traqy-api > Environment > TRAQY_API_KEY. Clé de l'ordinateur : dans .env (différente). Vérifié depuis internet : accueil OK, base connectée, accès refusé sans clé.
+- Rappel démo : l'offre gratuite de Render endort l'API après 15 minutes sans visite ; le premier chargement peut prendre près d'une minute.
+- Prochaine tâche : étape 5 (interface : les cinq écrans, d'abord avec des données d'exemple).
