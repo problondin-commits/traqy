@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traqy · maquette app</title>
+<style>
+  :root {
+    --fond: #111317; --carte: #181b21; --muted: #22262e; --texte: #f5f5f3; --gris: #9aa1ad;
+    --vert: #31f2a4; --vert-texte: #0b0d10; --rouge: #ff6b6b; --orange: #f5b84a; --filet: rgba(255,255,255,.09);
+    --page: #0a0b0d;
+  }
+  .clair {
+    --fond: #f7f7f5; --carte: #ffffff; --muted: #eeefec; --texte: #111317; --gris: #5b616b;
+    --vert: #10a06a; --vert-texte: #0b0d10; --rouge: #d9480f; --orange: #a86512; --filet: rgba(0,0,0,.09);
+    --page: #e6e7e3;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; background: var(--page); color: var(--texte); padding: 24px 16px 48px; }
+  .barre-haut { max-width: 1240px; margin: 0 auto 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  .barre-haut h1 { font-size: 18px; font-weight: 600; }
+  .barre-haut p { color: var(--gris); font-size: 13px; margin-top: 2px; }
+  .bascule { display: inline-flex; background: var(--muted); border-radius: 10px; padding: 3px; }
+  .bascule button { border: 0; background: none; color: var(--gris); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .bascule button.actif { background: var(--carte); color: var(--texte); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .scene { max-width: 1240px; margin: 0 auto; display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .legende { text-align: center; color: var(--gris); font-size: 12px; margin-top: 10px; }
+
+  /* Téléphone */
+  .tel { width: 360px; height: 740px; border-radius: 44px; background: #000; padding: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.35); flex: none; }
+  .tel .ecran { width: 100%; height: 100%; border-radius: 34px; background: var(--fond); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .tel .statut { height: 34px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 12px; font-weight: 600; flex: none; }
+  .tel .entete { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px 10px; flex: none; }
+  .puce-client { background: var(--muted); border-radius: 999px; padding: 5px 10px; font-size: 12px; }
+  .tel .contenu { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+  .tel .contenu::-webkit-scrollbar { display: none; }
+  .onglets { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--filet); background: var(--carte); padding: 6px 4px 18px; }
+  .onglets button { border: 0; background: none; color: var(--gris); font: inherit; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px 0; }
+  .onglets button.actif { color: var(--vert); }
+  .onglets svg { width: 20px; height: 20px; }
+  .pastille-compte { background: var(--vert); color: var(--vert-texte); border-radius: 999px; font-size: 9px; padding: 0 5px; margin-left: 2px; }
+
+  /* Ordinateur */
+  .pc { width: 820px; max-width: 100%; flex: 1 1 620px; }
+  .pc .cadre { border-radius: 14px; overflow: hidden; background: var(--fond); box-shadow: 0 20px 60px rgba(0,0,0,.35); border: 1px solid var(--filet); }
+  .pc .chrome { height: 34px; background: var(--muted); display: flex; align-items: center; gap: 6px; padding: 0 12px; }
+  .pc .chrome i { width: 10px; height: 10px; border-radius: 50%; background: var(--gris); opacity: .5; display: block; }
+  .pc .chrome span { margin-left: 12px; font-size: 11px; color: var(--gris); background: var(--fond); border-radius: 6px; padding: 3px 10px; }
+  .pc .corps { display: grid; grid-template-columns: 190px 1fr; height: 560px; }
+  .pc aside { border-right: 1px solid var(--filet); padding: 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .pc aside .lien { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--gris); cursor: pointer; border: 0; background: none; font-family: inherit; text-align: left; }
+  .pc aside .lien.actif { background: color-mix(in oklab, var(--vert) 12%, transparent); color: var(--vert); }
+  .pc aside .lien svg { width: 15px; height: 15px; }
+  .pc main { overflow-y: auto; padding: 20px 26px; }
+
+  /* Éléments communs */
+  .logo { height: 22px; width: 74px; display: block; }
+  h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+  .sous { color: var(--gris); font-size: 12px; margin: 3px 0 14px; line-height: 1.4; }
+  .tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .pc .tuiles { grid-template-columns: repeat(4, 1fr); }
+  .tuile { background: var(--carte); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--filet); }
+  .tuile small { color: var(--gris); font-size: 11px; display: block; }
+  .tuile b { font-size: 19px; font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }
+  .tuile .v { color: var(--vert); }
+  .tuile .r { color: var(--rouge); }
+  .recherche { background: var(--carte); border: 1px solid var(--filet); border-radius: 10px; padding: 8px 12px; color: var(--gris); font-size: 12px; margin-bottom: 10px; }
+  .liste { display: flex; flex-direction: column; gap: 8px; }
+  .ligne { background: var(--carte); border: 1px solid var(--filet); border-radius: 12px; padding: 10px 12px; display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; }
+  .point { width: 9px; height: 9px; border-radius: 50%; }
+  .ligne .titre { font-size: 13.5px; font-weight: 600; }
+  .ligne .meta { font-size: 11px; color: var(--gris); margin-top: 1px; }
+  .ligne .droite { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .ligne .score { font-size: 11px; font-weight: 600; }
+  .carte { background: var(--carte); border: 1px solid var(--filet); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .regle { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--gris); }
+  .montant { font-size: 22px; font-weight: 700; color: var(--vert); font-variant-numeric: tabular-nums; }
+  .etiquette { display: inline-block; font-size: 10px; background: var(--muted); color: var(--gris); border-radius: 999px; padding: 2px 8px; margin-top: 4px; }
+  .boutons { display: flex; gap: 8px; margin-top: 12px; }
+  .bouton { flex: 1; border-radius: 10px; padding: 9px; text-align: center; font-size: 13px; font-weight: 600; border: 1px solid var(--filet); cursor: pointer; background: none; color: var(--texte); font-family: inherit; }
+  .bouton.plein { background: var(--vert); color: var(--vert-texte); border-color: transparent; }
+  .graph { display: flex; align-items: flex-end; gap: 3px; height: 110px; margin: 10px 0 4px; }
+  .graph i { flex: 1; background: var(--vert); border-radius: 3px 3px 0 0; display: block; }
+  .graph i.prev { background: repeating-linear-gradient(45deg, color-mix(in oklab, var(--vert) 45%, transparent) 0 3px, transparent 3px 6px); }
+  .barre { height: 7px; background: var(--muted); border-radius: 999px; overflow: hidden; margin: 8px 0 6px; }
+  .barre i { display: block; height: 100%; background: var(--orange); border-radius: 999px; }
+  .pays { display: flex; justify-content: space-between; font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid var(--filet); }
+  .pays span:last-child { color: var(--gris); font-variant-numeric: tabular-nums; }
+  .info { font-size: 11px; color: var(--gris); line-height: 1.45; }
+  .deux { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .pc .deux { grid-template-columns: 1fr 1fr; }
+</style>
+</head>
+<body>
+<div class="barre-haut">
+  <div>
+    <h1>Traqy, maquette de l'app</h1>
+    <p>Données inventées (Label Démo). Touchez les onglets du téléphone ou les liens de l'ordinateur.</p>
+  </div>
+  <div class="bascule" role="group" aria-label="Thème">
+    <button type="button" class="actif" data-theme="sombre">Sombre</button>
+    <button type="button" data-theme="clair">Clair</button>
+  </div>
+</div>
+
+<div class="scene">
+  <div>
+    <div class="tel">
+      <div class="ecran">
+        <div class="statut"><span>9:41</span><span>5G ▮▮▮</span></div>
+        <div class="entete"><span class="logo-ici"></span><span class="puce-client">Label Démo ▾</span></div>
+        <div class="contenu" id="tel-contenu"></div>
+        <nav class="onglets" id="tel-onglets"></nav>
+      </div>
+    </div>
+    <p class="legende">Téléphone · installée sur l'écran d'accueil</p>
+  </div>
+
+  <div class="pc">
+    <div class="cadre">
+      <div class="chrome"><i></i><i></i><i></i><span>app.traqy.fr</span></div>
+      <div class="corps">
+        <aside id="pc-nav"><div style="padding:4px 10px 14px"><span class="logo-ici"></span></div></aside>
+        <main id="pc-contenu"></main>
+      </div>
+    </div>
+    <p class="legende">Ordinateur · dans le navigateur</p>
+  </div>
+</div>
+
+<script>
+  const ICONES = {
+    depot: '<path d="M12 15V3m0 0L7 8m5-5l5 5M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/>',
+    catalogue: '<path d="M4 19V5m4 14V5m4 14l4-14 4 14"/>',
+    alertes: '<path d="M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9m4 13h4"/>',
+    projection: '<path d="M3 17l6-6 4 4 8-8m0 0h-6m6 0v6"/>',
+    rapports: '<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z M14 3v6h6M8 13h8M8 17h5"/>',
+  };
+  const ECRANS = [
+    { id: "depot", nom: "Dépôt" }, { id: "catalogue", nom: "Catalogue" }, { id: "alertes", nom: "Alertes", compte: 3 },
+    { id: "projection", nom: "Projection" }, { id: "rapports", nom: "Rapports" },
+  ];
+  const icone = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONES[id]}</svg>`;
+  const logo = () => `<svg class="logo" viewBox="0 2 1266 380"><rect x="0" y="160" width="70" height="139" rx="35" fill="#31F2A4"/><rect x="89" y="91" width="70" height="208" rx="35" fill="#31F2A4"/><rect x="179" y="2" width="70" height="228" rx="35" fill="#31F2A4"/><circle cx="214" cy="320" r="35" fill="#31F2A4"/><text x="320" y="300" font-family="-apple-system,Segoe UI,Inter,sans-serif" font-weight="700" font-size="300" fill="currentColor">traqy</text></svg>`;
+
+  const OEUVRES = [
+    ["Minuit Pile", "Nova Lune", 100, "v", "14 820 €", ""], ["Ciel Ouvert", "Nova Lune", 60, "r", "9 000 €", "1 125 € en jeu"],
+    ["Ligne 7", "Kenzo Rive", 100, "v", "6 240 €", ""], ["Rive Gauche", "Kenzo Rive", 60, "j", "5 310 €", "parts absentes"],
+    ["Lumière Basse", "Nova Lune", 60, "j", "4 775 €", "parts absentes"], ["Dernier Métro", "Kenzo Rive", 40, "r", "3 920 €", "2 310 € en jeu"],
+    ["Sable Noir", "Nova Lune", 100, "v", "3 105 €", ""],
+  ];
+  const coul = { v: "var(--vert)", j: "var(--orange)", r: "var(--rouge)" };
+
+  const VUES = {
+    depot: (pc) => `<h2>Dépôt</h2><p class="sous">Déposez une seule fois votre catalogue et vos relevés. Traqy reconnaît chaque fichier.</p>
+      <div class="carte" style="text-align:center;padding:28px 14px;border-style:dashed">${icone("depot").replace("<svg", '<svg style="width:28px;height:28px;color:var(--vert)"')}
+      <p style="margin-top:8px;font-weight:600;font-size:14px">${pc ? "Glissez vos fichiers ici" : "Choisir des fichiers"}</p><p class="info">CSV, Excel ou ZIP · catalogue, relevés SACEM, distributeur</p></div>
+      <div class="liste">${[["catalogue_label_demo.xlsx", "Catalogue · 42 lignes"], ["sacem_repartitions_2024_2026.csv", "Droits d'auteur · 118 lignes"], ["distributeur_2025.csv", "Relevé distributeur · 1 460 lignes"]]
+        .map(([f, d]) => `<div class="ligne"><span class="point" style="background:var(--vert)"></span><div><div class="titre" style="font-size:12.5px">${f}</div><div class="meta">${d}</div></div><span class="meta">importé</span></div>`).join("")}</div>`,
+
+    catalogue: (pc) => `<h2>Catalogue</h2><p class="sous">Chaque œuvre, son score et l'argent en jeu.</p>
+      <div class="tuiles"><div class="tuile"><small>Score du catalogue</small><b class="v">82 %</b></div><div class="tuile"><small>Œuvres</small><b>10</b></div>
+      ${pc ? '<div class="tuile"><small>Parts complètes</small><b>7 / 10</b></div>' : ""}<div class="tuile"><small>Revenus relevés</small><b>54 240 €</b></div></div>
+      <div class="recherche">🔍 Titre, artiste, ISWC ou ISRC</div>
+      <div class="liste">${OEUVRES.map(([t, a, s, c, m, n]) => `<div class="ligne"><span class="point" style="background:${coul[c]}"></span>
+        <div><div class="titre">${t}</div><div class="meta">${a}${n ? " · " + n : ""}</div></div>
+        <div class="droite">${m}<div class="score" style="color:${s === 100 ? "var(--vert)" : s >= 60 ? "var(--orange)" : "var(--rouge)"}">${s} %</div></div></div>`).join("")}</div>`,
+
+    alertes: () => `<h2>Alertes</h2><p class="sous">Les droits non perçus, classés par argent en jeu. Validez ceux à réclamer.</p>
+      <div class="tuiles"><div class="tuile"><small>Non perçus chiffrés</small><b class="v">22 645 €</b></div><div class="tuile"><small>Alertes</small><b>3</b></div></div>
+      ${[["Solde jamais payé", "Éditions Horizon", "18 420 €", "Montant relevé"], ["Revenus qui s'arrêtent", "Dernier Métro", "2 310 €", "Estimation"], ["Parts incomplètes", "Ciel Ouvert", "1 125 €", "Estimation"]]
+        .map(([r, o, m, n]) => `<div class="carte"><div class="regle">${r}</div><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-top:3px">
+        <div><div class="titre" style="font-size:15px;font-weight:600">${o}</div><span class="etiquette">${n}</span></div><div class="montant">${m}</div></div>
+        <div class="boutons"><button class="bouton plein">✓ Valider</button><button class="bouton">Écarter</button></div></div>`).join("")}`,
+
+    projection: (pc) => `<h2>Projection</h2><p class="sous">Les revenus à venir, prolongés à partir des propres relevés du client. Estimation.</p>
+      <div class="tuiles"><div class="tuile"><small>Déjà relevé</small><b>154 980 €</b></div><div class="tuile"><small>À venir sur 5 ans</small><b class="v">98 400 €</b></div></div>
+      <div class="deux"><div class="carte"><div class="titre" style="font-size:13px;font-weight:600">Chiffre d'affaires mensuel</div>
+      <div class="graph">${[40,90,80,70,66,62,58,55,52,50,47,45,43,41,39,37,35,33,31,30,29,27,26,25].map((h, i) => `<i class="${i > 15 ? "prev" : ""}" style="height:${h}%"></i>`).join("")}</div>
+      <p class="info">Baisse retenue : 9 à 22 % par an · test sur le passé : écart moyen 8 %</p></div>
+      <div class="carte"><div class="titre" style="font-size:13px;font-weight:600">Avance · Minuit Pile (album)</div>
+      <div class="barre"><i style="width:69%"></i></div><p class="info">41 250 € recoupés sur 60 000 € (68,8 %) · fin estimée 2027 S1</p>
+      <div style="margin-top:12px">${[["France", "31 840 €"], ["Belgique", "2 410 €"], ["Suisse", "1 980 €"], ["Canada", "1 120 €"]].map(([p, m]) => `<div class="pays"><span>${p}</span><span>${m}</span></div>`).join("")}</div></div></div>`,
+
+    rapports: () => `<h2>Rapports</h2><p class="sous">Les documents à remettre ou à transmettre.</p>
+      ${[["Rapport d'audit", "PDF", "Synthèse, droits non perçus, avances, pays, fiches par œuvre."], ["Dossier de preuves", "CSV", "Chaque alerte avec ses lignes de relevés."]]
+        .map(([t, f, d]) => `<div class="carte"><div style="display:flex;justify-content:space-between"><div class="titre" style="font-weight:600">${t}</div><span class="etiquette" style="margin:0">${f}</span></div>
+        <p class="info" style="margin-top:4px">${d}</p><div class="boutons"><button class="bouton plein">⤓ Télécharger</button></div></div>`).join("")}`,
+  };
+
+  let telActif = "catalogue", pcActif = "catalogue";
+  function rendre() {
+    document.querySelectorAll(".logo-ici").forEach((e) => (e.innerHTML = logo()));
+    document.getElementById("tel-contenu").innerHTML = VUES[telActif](false);
+    document.getElementById("tel-onglets").innerHTML = ECRANS.map((e) =>
+      `<button type="button" data-ecran="${e.id}" class="${e.id === telActif ? "actif" : ""}">${icone(e.id)}<span>${e.nom}${e.compte ? `<span class="pastille-compte">${e.compte}</span>` : ""}</span></button>`).join("");
+    document.getElementById("pc-contenu").innerHTML = VUES[pcActif](true);
+    const nav = document.getElementById("pc-nav");
+    nav.querySelectorAll(".lien").forEach((l) => l.remove());
+    nav.insertAdjacentHTML("beforeend", ECRANS.map((e) =>
+      `<button type="button" class="lien ${e.id === pcActif ? "actif" : ""}" data-pc="${e.id}">${icone(e.id)}${e.nom}</button>`).join(""));
+  }
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-ecran],[data-pc],[data-theme]");
+    if (!t) return;
+    if (t.dataset.ecran) telActif = t.dataset.ecran;
+    if (t.dataset.pc) pcActif = t.dataset.pc;
+    if (t.dataset.theme) {
+      document.documentElement.classList.toggle("clair", t.dataset.theme === "clair");
+      document.querySelectorAll("[data-theme]").forEach((b) => b.classList.toggle("actif", b === t));
+    }
+    rendre();
+  });
+  rendre();
+</script>
+</body>
+</html>

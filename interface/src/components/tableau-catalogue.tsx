@@ -105,7 +105,33 @@ export function TableauCatalogue({ lignes, fuites }: { lignes: LigneCatalogue[];
         <span className="ml-auto">{affichees.length} œuvres · {euros(total)}{filtreActif ? " pour ces filtres" : ""}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
+      {/* Téléphone : une carte par œuvre */}
+      <ul className="space-y-2 md:hidden">
+        {affichees.length === 0 ? (
+          <li className="rounded-xl bg-card px-4 py-8 text-center text-sm text-muted-foreground ring-1 ring-foreground/10">Aucune œuvre ne correspond à cette recherche.</li>
+        ) : (
+          affichees.map((o) => {
+            const note = o.enJeu > 0 ? `${euros(o.enJeu)} en jeu` : !o.iswc ? "ISWC manquant" : !complete(o.parts_dep) ? "parts incomplètes" : !o.isrc ? "ISRC manquant" : "";
+            return (
+              <li key={`${o.titre}-${o.iswc}-${o.isrc}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl bg-card px-3.5 py-3 ring-1 ring-foreground/10">
+                <Pastille etat={o.etat} />
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{o.titre}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {o.artiste || "—"}{note && <span className={o.enJeu > 0 ? "text-destructive" : undefined}> · {note}</span>}
+                  </p>
+                </div>
+                <div className="text-right text-sm tabular-nums">
+                  {o.revenus ? euros(o.revenus) : "—"}
+                  <div className="text-xs"><Score o={o} fuites={fuites} /></div>
+                </div>
+              </li>
+            );
+          })
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl ring-1 ring-foreground/10 md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -124,7 +150,7 @@ export function TableauCatalogue({ lignes, fuites }: { lignes: LigneCatalogue[];
           <TableBody>
             {affichees.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10}className="py-8 text-center text-muted-foreground">Aucune œuvre ne correspond à cette recherche.</TableCell>
+                <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">Aucune œuvre ne correspond à cette recherche.</TableCell>
               </TableRow>
             ) : (
               affichees.map((o) => (

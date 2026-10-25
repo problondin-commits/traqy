@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BarreLaterale, BarreSquelette } from "@/components/barre-laterale";
 import { Theme } from "@/components/theme";
@@ -20,6 +20,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Traqy",
   description: "Retrouvez les droits non perçus de votre catalogue.",
+  // iPhone : ouverture en plein écran depuis l'écran d'accueil
+  appleWebApp: { capable: true, title: "Traqy", statusBarStyle: "black-translucent" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#111317" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f5" },
+  ],
 };
 
 // Toutes les pages dépendent du client choisi et des données du moteur : elles ne peuvent pas être préparées à l'avance.
@@ -49,7 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Suspense fallback={<BarreSquelette />}>
               <BarreAvecDonnees />
             </Suspense>
-            <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 lg:px-12">
+            <main className="min-w-0 flex-1 px-4 pt-6 pb-28 sm:px-8 md:py-8 lg:px-12">
               <div className="mx-auto max-w-6xl">{children}</div>
             </main>
           </TooltipProvider>

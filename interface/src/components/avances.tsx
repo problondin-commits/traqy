@@ -14,12 +14,12 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
       <p className="mb-4 text-sm text-muted-foreground">
         Montant de l&apos;avance déclaré par le client. Le recoupement est lu dans les relevés, semestre par semestre.
       </p>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {avances.map((a) => {
           const taux = a.taux ?? 0;
           const recoupee = a.reste <= 0;
           return (
-            <article key={a.contrat} className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
+            <article key={a.contrat} className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium break-words">{a.projet ?? a.contrat}</p>

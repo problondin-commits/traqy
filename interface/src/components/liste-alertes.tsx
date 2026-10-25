@@ -124,8 +124,8 @@ export function ListeAlertes({ fuites }: { fuites: Fuite[] }) {
                   </>
                 ) : (
                   <>
-                    <Button size="sm" onClick={() => decider(id, "validée")}><Check /> Valider</Button>
-                    <Button variant="outline" size="sm" onClick={() => decider(id, "écartée")}><X /> Écarter</Button>
+                    <Button className="h-10 flex-1 sm:h-8 sm:flex-none" onClick={() => decider(id, "validée")}><Check /> Valider</Button>
+                    <Button variant="outline" className="h-10 flex-1 sm:h-8 sm:flex-none" onClick={() => decider(id, "écartée")}><X /> Écarter</Button>
                   </>
                 )}
               </div>
