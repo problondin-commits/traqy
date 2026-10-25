@@ -1,3 +1,4 @@
+import { Avances } from "@/components/avances";
 import { EnTete, Indisponible, Tuile, Vide } from "@/components/elements";
 import { TableauCatalogue } from "@/components/tableau-catalogue";
 import { chargerDonnees } from "@/lib/donnees";
@@ -34,9 +35,11 @@ export default async function Catalogue() {
         <Tuile libelle="Revenus relevés" valeur={euros(revenus)} />
       </div>
       <p className="-mt-5 mb-8 text-xs text-muted-foreground">
-        Score : part des 5 contrôles réussis (ISWC, ISRC, parts à 100 %, présence dans les relevés de droits d'auteur, aucune alerte chiffrée ouverte).
-        100 % veut dire que tous les contrôles sont réussis, pas qu'aucun argent ne manque.
+        Score : part des 5 contrôles réussis (ISWC, ISRC, parts à 100 %, présence dans les relevés de droits d&apos;auteur, aucune alerte chiffrée ouverte).
+        100 % veut dire que tous les contrôles sont réussis, pas qu&apos;aucun argent ne manque.
       </p>
+
+      <Avances avances={vue.avances ?? []} />
 
       {catalogue.length === 0 ? (
         <Vide message="Aucune œuvre : déposez le catalogue du client (œuvres, ayants droit et parts) dans l'écran Dépôt." />

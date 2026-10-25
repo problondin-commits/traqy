@@ -128,7 +128,7 @@ export function TableauCatalogue({ lignes, fuites }: { lignes: LigneCatalogue[];
               </TableRow>
             ) : (
               affichees.map((o) => (
-                <TableRow key={`${o.titre}-${o.iswc}`}>
+                <TableRow key={`${o.titre}-${o.iswc}-${o.isrc}`}>
                   <TableCell><Pastille etat={o.etat} /></TableCell>
                   <TableCell className="font-medium">{o.titre}</TableCell>
                   <TableCell className="text-right"><Score o={o} fuites={fuites} /></TableCell>

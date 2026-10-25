@@ -55,8 +55,29 @@ export type LigneCatalogue = {
   ayants_droit: number;
   parts_dep: number | null; // total des parts DEP en %
   revenus: number;
+  projet?: string | null; // album, quand seul un relevé distributeur est déposé
   detail?: DetailRevenu[]; // absent sur un moteur plus ancien
 };
+
+// Avance versée sur un contrat (montant déclaré par le client) et son recoupement lu dans les relevés
+export type Avance = {
+  contrat: string;
+  projet: string | null;
+  montant: number;
+  devise: string | null;
+  recoupe: number;
+  reste: number;
+  taux: number | null; // part recoupée, de 0 à 1
+  recettes: number; // part du client avant recoupement
+  frais: number;
+  net_verse: number; // somme des relevés du contrat (négatif : frais encore à couvrir)
+  periodes: { periode: string; recoupe: number }[];
+  estimation: { periode: string; semestres: number; rythme: number; methode: string } | null;
+  source: string;
+};
+
+// Recettes par pays (code à deux lettres), lues dans les relevés
+export type RevenuPays = { pays: string; montant: number; quantite: number };
 
 // Tout ce que les cinq écrans affichent pour un import (réponse de /api/v1/imports/{n}/vue)
 export type Vue = {
@@ -67,6 +88,8 @@ export type Vue = {
   manques: Manque[];
   fuites: Fuite[];
   catalogue: LigneCatalogue[];
+  avances?: Avance[];
+  pays?: RevenuPays[];
 };
 
 export type ImportResume = { id: number; client: string; cree_le: string };

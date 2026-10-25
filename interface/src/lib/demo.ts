@@ -146,6 +146,21 @@ export const vueDemo: Vue = {
   manques: manquesDemo,
   fuites: fuitesDemo.map((f, i) => ({ ...f, id: -(i + 1), decision: null })),
   catalogue: catalogueDemo,
+  // Avance et pays inventés pour la démo
+  avances: [{
+    contrat: "CTR-DEMO-01", projet: "Minuit Pile (album, coproduction 50/50)", montant: 60000, devise: "EUR",
+    recoupe: 41250, reste: 18750, taux: 0.6875, recettes: 52400, frais: 4100, net_verse: 7050,
+    periodes: [{ periode: "2024 S2", recoupe: 15200 }, { periode: "2025 S1", recoupe: 13400 }, { periode: "2025 S2", recoupe: 12650 }],
+    estimation: { periode: "2027 S1", semestres: 2, rythme: 13025, methode: "Reste à recouper (18 750 €) ÷ moyenne des 2 derniers recoupements (13 025 € par semestre) = 2 semestre(s). Estimation, pas un engagement." },
+    source: "Montant de l'avance déclaré par le client ; recoupement lu dans les relevés",
+  }],
+  pays: [
+    { pays: "FR", montant: 31840, quantite: 9120000 }, { pays: "BE", montant: 2410, quantite: 640000 },
+    { pays: "CH", montant: 1980, quantite: 410000 }, { pays: "CA", montant: 1120, quantite: 390000 },
+    { pays: "MA", montant: 640, quantite: 820000 }, { pays: "CI", montant: 410, quantite: 760000 },
+    { pays: "SN", montant: 280, quantite: 530000 }, { pays: "DE", montant: 520, quantite: 150000 },
+    { pays: "US", montant: 470, quantite: 140000 }, { pays: "GB", montant: 330, quantite: 95000 },
+  ],
 };
 
 export const rapports: Rapport[] = [

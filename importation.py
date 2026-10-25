@@ -11,7 +11,8 @@ Dans un classeur Excel, la ligne d'en-tête est cherchée dans les premières li
 Formats reconnus aujourd'hui :
   - Catalogue Traqy · ayants droit et parts (une ligne par ayant droit et par œuvre)
   - Catalogue Traqy · œuvres (une ligne par œuvre, avec ISWC, code SACEM ou ISRC)
-  - Relevé distributeur détaillé (format lu par l'ancien Colab)
+  - Relevé distributeur détaillé (format lu par l'ancien Colab, ex. Believe « Statement_Details »)
+  - Catalogue Traqy · avances (avances versées par contrat, déclarées par le client)
   - Relevés au format Traqy : écoutes, droits d'auteur, synchro et publicité, réseaux sociaux, retenues, soldes de comptes
 """
 import calendar
@@ -28,7 +29,7 @@ import pandas as pd
 
 import controle
 import fuites
-from modele import BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu, Solde
+from modele import Avance, BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu, RevenuPays, Solde
 
 MOIS_NOMS = {m: i for i, m in enumerate(["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
                                           "août", "septembre", "octobre", "novembre", "décembre"], start=1)}
@@ -236,41 +237,84 @@ def traduire_releve_traqy(d, nom, categorie, champs, res, bilan):
         res.revenus.append(Revenu(categorie=categorie, fichier=nom, ligne=i + 2, **valeurs))
         bilan.lignes_importees += 1
 
+TYPES_DISTRIBUTEUR = {"Physical Sales": Categorie.ventes_physiques, "Neighboring Rights": Categorie.droits_voisins,
+                      "Expense": Categorie.frais, "Costs": Categorie.frais, "Advance": Categorie.avance,
+                      "Income": Categorie.autres_revenus}
+
+def nombres(colonne):
+    """Colonne de montants « 1 234,50 € » -> nombres (NaN si vide ou illisible)."""
+    s = colonne.astype(str).str.replace(r"[\s\xa0 €%]", "", regex=True).str.replace(",", ".", regex=False)
+    return pd.to_numeric(s.where(s != "", None), errors="coerce")
+
 def traduire_distributeur(d, nom, res, bilan):
-    """Relevé distributeur détaillé. Tout est importé : ventes, droits voisins, frais et avances, avec contrat et taux de partage."""
-    for i, ligne in d.iterrows():
-        type_ligne = texte(ligne["type"])
-        if type_ligne == "Physical Sales":
-            categorie = Categorie.ventes_physiques
-        elif type_ligne == "Digital Sales":
-            categorie = Categorie.streaming if texte(ligne.get("type_dexploitation")) == "Streaming" else Categorie.ventes_numeriques
-        elif type_ligne == "Neighboring Rights":
-            categorie = Categorie.droits_voisins
-        elif type_ligne == "Expense":
-            categorie = Categorie.frais
-        elif type_ligne == "Advance":
-            categorie = Categorie.avance
-        else:
-            noter(bilan, f"Ligne {i + 2} ignorée : type de ligne inconnu « {type_ligne} ».")
-            continue
-        try:
-            montant, quantite = nombre(ligne["revenu"], "Revenu"), nombre(ligne.get("ventes_nettes"), "Ventes nettes")
-        except ErreurLigne as e:
-            noter(bilan, f"Ligne {i + 2} ignorée : {e}.")
-            continue
-        if montant is None:
-            noter(bilan, f"Ligne {i + 2} : aucun montant, non importée.")
-            continue
-        periode = texte(ligne["date_de_reporting"])
-        debut, fin = lire_periode(periode)
-        isrc = texte(ligne.get("isrc"))
-        res.revenus.append(Revenu(categorie=categorie, titre=texte(ligne["titre_du_produit_description"]),
-                                  isrc=isrc.upper() if isrc else None, periode=periode, debut=debut, fin=fin,
-                                  plateforme=texte(ligne.get("plateforme")), pays=texte(ligne.get("pays")),
-                                  quantite=quantite, montant=montant, devise=texte(ligne.get("devise")),
-                                  contrat=texte(ligne.get("numero_de_contrat")), taux_partage=texte(ligne.get("taux")),
-                                  fichier=nom, ligne=i + 2))
-        bilan.lignes_importees += 1
+    """Relevé distributeur détaillé (ex. Believe « Statement_Details »). Tout est importé : ventes, droits voisins,
+    merchandising, frais et avances, avec contrat, taux, plateforme et pays.
+    - Le montant retenu est la colonne « Montant » (la part du client, après partage et taux) quand elle existe,
+      sinon « Revenu ». Les lignes à taux négatif (ex. royautés d'artiste à reverser) sont des retenues.
+    - Les lignes identiques (même titre, ISRC, semestre, plateforme, pays, contrat, taux) sont regroupées :
+      un relevé de plusieurs centaines de milliers de lignes reste ainsi léger dans la base."""
+    if d.empty:
+        return
+    v = lambda c: d[c].astype(str).str.strip() if c in d else pd.Series("", index=d.index)
+    type_ligne = v("type")
+    categorie = type_ligne.map(lambda t: TYPES_DISTRIBUTEUR.get(t))
+    numerique = type_ligne == "Digital Sales"
+    categorie[numerique] = v("type_dexploitation")[numerique].map(
+        lambda e: Categorie.streaming if e == "Streaming" else Categorie.ventes_numeriques)
+    taux_negatif = v("taux").str.startswith("-")
+    ventes = categorie.isin([Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_physiques,
+                             Categorie.droits_voisins, Categorie.autres_revenus])
+    categorie[taux_negatif & ventes] = Categorie.retenue
+    montant = nombres(d["montant"] if "montant" in d else d["revenu"])
+    quantite = nombres(d["ventes_nettes"]) if "ventes_nettes" in d else pd.Series(float("nan"), index=d.index)
+
+    inconnues = categorie.isna()
+    for i in d.index[inconnues][:MESSAGES_MAX]:
+        noter(bilan, f"Ligne {i + 2} ignorée : type de ligne inconnu « {type_ligne[i]} ».")
+    bilan.lignes_ignorees += max(0, int(inconnues.sum()) - MESSAGES_MAX)
+    sans_montant = ~inconnues & montant.isna()
+    for i in d.index[sans_montant][:MESSAGES_MAX]:
+        noter(bilan, f"Ligne {i + 2} : aucun montant lisible, non importée.")
+    bilan.lignes_ignorees += max(0, int(sans_montant.sum()) - MESSAGES_MAX)
+
+    piste, produit = v("titre_de_la_piste"), v("titre_du_produit_description")
+    # Regroupement par semestre (la période des relevés Believe) : « 15/03/2024 » -> « 2024 S1 »
+    date_rep = pd.to_datetime(v("date_de_reporting"), format="%d/%m/%Y", errors="coerce")
+    semestre = (date_rep.dt.year.astype("Int64").astype(str) + " S" + (1 + (date_rep.dt.month > 6)).astype("Int64").astype(str))
+    periode = semestre.where(date_rep.notna(), v("date_de_reporting"))
+    t = pd.DataFrame({
+        "categorie": categorie, "titre": piste.where(piste != "", produit), "projet": produit,
+        "artiste": v("artiste_de_la_piste").where(v("artiste_de_la_piste") != "", v("artiste_du_produit")),
+        "isrc": v("isrc").str.upper(), "periode": periode, "plateforme": v("plateforme"), "pays": v("pays"),
+        "contrat": v("numero_de_contrat"), "taux": v("taux"), "devise": v("devise"),
+        "montant": montant, "quantite": quantite, "ligne": d.index + 2,
+    })[~inconnues & ~sans_montant]
+    vide = lambda x: None if x in ("", "nan") else x
+    # 1. Revenus par titre, semestre et plateforme (sans le pays). Les retenues sont regroupées sans plateforme.
+    t_rev = t.assign(plateforme=t["plateforme"].where(t["categorie"] != Categorie.retenue, ""))
+    cles = ["categorie", "titre", "projet", "artiste", "isrc", "periode", "plateforme", "contrat", "taux", "devise"]
+    g = t_rev.groupby(cles, sort=False, dropna=False).agg(montant=("montant", "sum"), quantite=("quantite", "sum"),
+                                                           ligne=("ligne", "min")).reset_index()
+    periodes = {p: lire_periode(vide(p)) for p in g["periode"].unique()}
+    for l in g.itertuples(index=False):
+        debut, fin = periodes[l.periode]
+        res.revenus.append(Revenu(categorie=l.categorie, titre=vide(l.titre), artiste=vide(l.artiste), isrc=vide(l.isrc),
+                                  periode=vide(l.periode), debut=debut, fin=fin, plateforme=vide(l.plateforme),
+                                  quantite=None if math.isnan(l.quantite) else round(l.quantite, 4),
+                                  montant=round(float(l.montant), 6), devise=vide(l.devise), contrat=vide(l.contrat),
+                                  taux_partage=vide(l.taux), fichier=nom, ligne=int(l.ligne)))
+    # 2. Les mêmes revenus, regroupés par pays (pour la carte)
+    p = t[t["pays"] != ""].groupby(["pays", "categorie", "periode", "contrat"], sort=False).agg(
+        montant=("montant", "sum"), quantite=("quantite", "sum")).reset_index()
+    for l in p.itertuples(index=False):
+        res.revenus_pays.append(RevenuPays(pays=l.pays.upper(), categorie=l.categorie, periode=vide(l.periode),
+                                           contrat=vide(l.contrat), quantite=round(float(l.quantite), 4),
+                                           montant=round(float(l.montant), 6), fichier=nom))
+    bilan.lignes_importees += int(len(t))
+    # Enregistrements (un par ISRC) : titre de la piste, album, artiste
+    pistes = t[(t["isrc"] != "") & (t["titre"] != "")].drop_duplicates("isrc")
+    for l in pistes.itertuples(index=False):
+        res.enregistrements.append(Enregistrement(titre=l.titre, isrc=l.isrc, projet=vide(l.projet), artiste=vide(l.artiste)))
 
 def traduire_catalogue(d, nom, res, bilan):
     lues = []
@@ -323,6 +367,23 @@ def traduire_soldes(d, nom, res, bilan):
                                 devise=texte(ligne.get("devise")), fichier=nom, ligne=i + 2))
         bilan.lignes_importees += 1
 
+def traduire_avances(d, nom, res, bilan):
+    """Avances déclarées par le client : une ligne par contrat (contrat ; projet ; montant_avance ; date ; devise)."""
+    for i, ligne in d.iterrows():
+        contrat = texte(ligne.get("contrat"))
+        try:
+            montant = nombre(ligne.get("montant_avance"), "Montant de l'avance")
+        except ErreurLigne as e:
+            noter(bilan, f"Ligne {i + 2} ignorée : {e}.")
+            continue
+        if not contrat or montant is None:
+            noter(bilan, f"Ligne {i + 2} ignorée : contrat ou montant absent.")
+            continue
+        debut, _ = lire_periode(texte(ligne.get("date")))
+        res.avances.append(Avance(contrat=contrat, projet=texte(ligne.get("projet")), montant=montant,
+                                  devise=texte(ligne.get("devise")) or "EUR", date_versement=debut, fichier=nom, ligne=i + 2))
+        bilan.lignes_importees += 1
+
 def traduire_oeuvres(d, nom, res, bilan):
     for i, ligne in d.iterrows():
         titre = texte(ligne["titre"], garder_non_indique=True)
@@ -349,6 +410,8 @@ def noter(bilan, message):
 def reconnaitre(colonnes):
     if {"type", "titre_du_produit_description", "date_de_reporting", "revenu"} <= colonnes:
         return "Relevé distributeur détaillé"
+    if {"contrat", "montant_avance"} <= colonnes:
+        return "Catalogue Traqy · avances"
     for nom_format, requises, _, _ in RELEVES_TRAQY:
         if requises <= colonnes:
             return nom_format
@@ -393,6 +456,8 @@ def importer(fichiers):
                 traduire_oeuvres(d, nom_tab, res, bilan)
             elif format_ == "Relevé distributeur détaillé":
                 traduire_distributeur(d, nom_tab, res, bilan)
+            elif format_ == "Catalogue Traqy · avances":
+                traduire_avances(d, nom_tab, res, bilan)
             else:
                 _, _, categorie, champs = next(f for f in RELEVES_TRAQY if f[0] == format_)
                 traduire_releve_traqy(d, nom_tab, categorie, champs, res, bilan)
@@ -407,6 +472,7 @@ def importer(fichiers):
     res.enregistrements = fusionner(res.enregistrements, lambda e: e.isrc)
     res.parts = sans_doublons_entre_fichiers(parts_par_tableau)
     res.soldes = fusionner(res.soldes, lambda s: (s.payeur, s.compte, s.periode))
+    res.avances = fusionner(res.avances, lambda a: a.contrat)
     res.manques = controle.controler(res)
     res.fuites = fuites.detecter(res)
     res.resume = {

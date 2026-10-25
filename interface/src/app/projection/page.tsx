@@ -2,6 +2,8 @@ import { connection } from "next/server";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avances } from "@/components/avances";
+import { CartePays } from "@/components/carte-pays";
 import { EnTete, Indisponible, Tuile } from "@/components/elements";
 import { GraphiqueProjection } from "@/components/graphique-projection";
 import { ErreurMoteur, lireProjection, moteurConfigure, projeterCourbe } from "@/lib/api";
@@ -177,6 +179,18 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
           </div>
         </>
       )}
+
+      <div className="mt-8">
+        <Avances avances={vue.avances ?? []} compact />
+      </div>
+
+      <section className="mt-2">
+        <h2 className="mb-1 font-medium">Recettes par pays</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Ce que chaque pays a rapporté au client, lu dans ses relevés. Aucun montant estimé : un pays sans relevé reste gris.
+        </p>
+        <CartePays donnees={vue.pays ?? []} />
+      </section>
     </>
   );
 }

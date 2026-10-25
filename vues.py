@@ -2,6 +2,7 @@
 Traqy · Vue d'un import pour l'interface : tout ce que les cinq écrans affichent, en une seule réponse,
 sans envoyer au navigateur les centaines de lignes de revenus détaillées.
 """
+import math
 import re
 from collections import defaultdict
 
@@ -9,8 +10,10 @@ from controle import cle_iswc, cle_titre
 from modele import Categorie
 
 DROITS = {Categorie.droits_auteur}
-MASTER = {Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_physiques}
-TYPES = {Categorie.droits_auteur: "Droits d'auteur"} | {c: "Enregistrement (master)" for c in MASTER}
+MASTER = {Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_physiques, Categorie.droits_voisins}
+TYPES = ({Categorie.droits_auteur: "Droits d'auteur"} | {c: "Enregistrement (master)" for c in MASTER}
+         | {Categorie.droits_voisins: "Droits voisins"})
+RECETTES = DROITS | MASTER | {Categorie.synchro, Categorie.reseaux_sociaux, Categorie.autres_revenus}
 
 
 def _annee(r):
@@ -31,7 +34,12 @@ def _fusion(*details):
     for d in details:
         for cle, montant in d.items():
             total[cle] += montant
-    return [{"annee": a, "plateforme": p, "type": t, "montant": round(m, 2)} for (a, p, t), m in sorted(total.items())]
+    return [{"annee": a, "plateforme": p, "type": t, "montant": round(m, 2)} for (a, p, t), m in sorted(total.items())
+            if round(m, 2) != 0]
+
+
+def _euros(x):
+    return f"{x:,.0f} €".replace(",", " ")
 
 
 def lignes_catalogue(imp):
@@ -79,7 +87,62 @@ def lignes_catalogue(imp):
             "ayants_droit": len(ses_parts), "parts_dep": round(sum(deps), 3) if deps else None, "revenus": round(revenus, 2),
             "detail": detail,
         })
+    # Sans catalogue d'œuvres (ex. relevés distributeur seuls) : une ligne par enregistrement (ISRC)
+    for e in ([] if imp.oeuvres else imp.enregistrements):
+        sortie.append({
+            "titre": e.titre, "artiste": e.artiste or "", "iswc": e.iswc, "isrc": e.isrc, "projet": e.projet,
+            "ayants_droit": 0, "parts_dep": None, "revenus": round(master.get(e.isrc, 0), 2),
+            "detail": _fusion(det_master.get(e.isrc, {})),
+        })
     return sorted(sortie, key=lambda l: -l["revenus"])
+
+
+def avances(imp):
+    """Avances déclarées et leur recoupement, lu dans les lignes « avance » des relevés (montants négatifs)."""
+    sortie = []
+    for a in imp.avances:
+        lignes = [r for r in imp.revenus if r.contrat == a.contrat]
+        par_periode = defaultdict(float)
+        for r in lignes:
+            if r.categorie == Categorie.avance:
+                par_periode[(r.debut, r.periode)] += -(r.montant or 0)
+        periodes = [{"periode": p, "recoupe": round(m, 2)} for (_, p), m in sorted(par_periode.items(), key=lambda x: (x[0][0] is None, x[0][0]))]
+        recoupe = sum(x["recoupe"] for x in periodes)
+        reste = max(a.montant - recoupe, 0.0)
+        recettes = sum(r.montant or 0 for r in lignes if r.categorie in RECETTES)
+        frais = -sum(r.montant or 0 for r in lignes if r.categorie == Categorie.frais)
+        net = sum(r.montant or 0 for r in lignes if r.categorie not in (Categorie.retenue,))
+        estimation = None
+        derniers = [x["recoupe"] for x in periodes[-2:] if x["recoupe"] > 0]
+        if reste > 0 and derniers:
+            rythme = sum(derniers) / len(derniers)
+            semestres = math.ceil(reste / rythme)
+            dernier = next((d for (d, _p) in sorted(par_periode, key=lambda x: (x[0] is None, x[0]), reverse=True) if d), None)
+            if dernier:
+                rang = dernier.year * 2 + (dernier.month > 6) + semestres
+                estimation = {
+                    "periode": f"{rang // 2} S{rang % 2 + 1}", "semestres": semestres, "rythme": round(rythme, 2),
+                    "methode": f"Reste à recouper ({_euros(reste)}) ÷ moyenne des {len(derniers)} derniers recoupements "
+                               f"({_euros(rythme)} par semestre) = {semestres} semestre(s). Estimation, pas un engagement.",
+                }
+        sortie.append({
+            "contrat": a.contrat, "projet": a.projet, "montant": a.montant, "devise": a.devise,
+            "recoupe": round(recoupe, 2), "reste": round(reste, 2), "taux": round(min(recoupe / a.montant, 1.0), 4) if a.montant else None,
+            "recettes": round(recettes, 2), "frais": round(frais, 2), "net_verse": round(net, 2),
+            "periodes": periodes, "estimation": estimation, "source": "Montant de l'avance déclaré par le client ; recoupement lu dans les relevés",
+        })
+    return sortie
+
+
+def pays(imp):
+    """Recettes par pays (code à deux lettres), lues dans les relevés. Rien n'est estimé."""
+    total = defaultdict(lambda: [0.0, 0.0])
+    for r in imp.revenus_pays:
+        if r.categorie in RECETTES:
+            total[r.pays][0] += r.montant
+            total[r.pays][1] += r.quantite or 0
+    return sorted(({"pays": p, "montant": round(m, 2), "quantite": round(q)} for p, (m, q) in total.items()),
+                  key=lambda x: -x["montant"])
 
 
 def vue(imp, cree_le=None):
@@ -92,4 +155,6 @@ def vue(imp, cree_le=None):
         "manques": [m.model_dump(mode="json") for m in imp.manques],
         "fuites": [f.model_dump(mode="json") for f in imp.fuites],
         "catalogue": lignes_catalogue(imp),
+        "avances": avances(imp),
+        "pays": pays(imp),
     }

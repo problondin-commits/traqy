@@ -64,7 +64,8 @@ class Categorie(str, Enum):
     droits_voisins = "droits_voisins"
     synchro = "synchro"
     reseaux_sociaux = "reseaux_sociaux"
-    retenue = "retenue"
+    autres_revenus = "autres_revenus"      # merchandising et autres recettes d'un relevé distributeur
+    retenue = "retenue"                    # sommes dues à un tiers (ex. royautés d'artiste, taux négatif)
     frais = "frais"
     avance = "avance"
 
@@ -89,6 +90,29 @@ class Revenu(BaseModel):
     beneficiaire: Optional[str] = None
     contrat: Optional[str] = None          # numéro de contrat indiqué dans le relevé
     taux_partage: Optional[str] = None     # taux de partage indiqué dans le relevé
+    fichier: str
+    ligne: int
+
+
+class RevenuPays(BaseModel):
+    """Revenus d'un relevé regroupés par pays (pour la carte). Ils doublent les lignes de revenus : ne jamais les additionner."""
+    pays: str                              # code pays à deux lettres (FR, BE…)
+    categorie: Categorie
+    periode: Optional[str] = None
+    contrat: Optional[str] = None
+    quantite: Optional[float] = None
+    montant: float
+    fichier: str
+
+
+class Avance(BaseModel):
+    """Avance versée sur un contrat (ex. coproduction). Son montant est déclaré par le client : les relevés
+    ne montrent que le recoupement, période par période (lignes « Advance » négatives)."""
+    contrat: str
+    projet: Optional[str] = None           # album ou projet couvert par le contrat
+    montant: float
+    devise: Optional[str] = "EUR"
+    date_versement: Optional[date] = None
     fichier: str
     ligne: int
 
@@ -144,6 +168,8 @@ class Import(BaseModel):
     parts: List[Part] = Field(default_factory=list)
     revenus: List[Revenu] = Field(default_factory=list)
     soldes: List[Solde] = Field(default_factory=list)
+    avances: List[Avance] = Field(default_factory=list)
+    revenus_pays: List[RevenuPays] = Field(default_factory=list)
     fichiers: List[BilanFichier] = Field(default_factory=list)
     manques: List[Manque] = Field(default_factory=list)
     fuites: List[Fuite] = Field(default_factory=list)
