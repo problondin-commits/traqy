@@ -135,14 +135,21 @@ def avances(imp):
 
 
 def pays(imp):
-    """Recettes par pays (code à deux lettres), lues dans les relevés. Rien n'est estimé."""
-    total = defaultdict(lambda: [0.0, 0.0])
-    for r in imp.revenus_pays:
-        if r.categorie in RECETTES:
-            total[r.pays][0] += r.montant
-            total[r.pays][1] += r.quantite or 0
-    return sorted(({"pays": p, "montant": round(m, 2), "quantite": round(q)} for p, (m, q) in total.items()),
-                  key=lambda x: -x["montant"])
+    """Recettes par pays (code à deux lettres), lues dans les relevés. Rien n'est estimé ici.
+    « recent » : recettes des 12 derniers mois relevés (les 2 derniers semestres), qui servent à répartir
+    la projection entre les pays dans l'interface."""
+    from importation import lire_periode
+    lignes = [r for r in imp.revenus_pays if r.categorie in RECETTES]
+    debuts = {p: lire_periode(p)[0] for p in {r.periode for r in lignes}}
+    recents = set(sorted((p for p, d in debuts.items() if d), key=lambda p: debuts[p])[-2:])
+    total = defaultdict(lambda: [0.0, 0.0, 0.0])
+    for r in lignes:
+        total[r.pays][0] += r.montant
+        total[r.pays][1] += r.quantite or 0
+        if r.periode in recents:
+            total[r.pays][2] += r.montant
+    return sorted(({"pays": p, "montant": round(m, 2), "quantite": round(q), "recent": round(rc, 2)}
+                   for p, (m, q, rc) in total.items()), key=lambda x: -x["montant"])
 
 
 def vue(imp, cree_le=None):

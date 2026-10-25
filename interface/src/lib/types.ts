@@ -77,7 +77,8 @@ export type Avance = {
 };
 
 // Recettes par pays (code à deux lettres), lues dans les relevés
-export type RevenuPays = { pays: string; montant: number; quantite: number };
+// « recent » : recettes des 12 derniers mois relevés, pour répartir la projection entre les pays
+export type RevenuPays = { pays: string; montant: number; quantite: number; recent?: number };
 
 // Tout ce que les cinq écrans affichent pour un import (réponse de /api/v1/imports/{n}/vue)
 export type Vue = {

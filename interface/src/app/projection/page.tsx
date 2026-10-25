@@ -1,7 +1,6 @@
 import { connection } from "next/server";
-import { Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avances } from "@/components/avances";
 import { CartePays } from "@/components/carte-pays";
 import { EnTete, Indisponible, Tuile } from "@/components/elements";
@@ -10,9 +9,11 @@ import { ErreurMoteur, lireProjection, moteurConfigure, projeterCourbe } from "@
 import { historiqueDemo, titresDemo } from "@/lib/demo";
 import { chargerDonnees } from "@/lib/donnees";
 import { euros } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Projection as TypeProjection, ReglagesProjection } from "@/lib/types";
 
 const HORIZONS = [3, 5, 10, 15];
+const ECART_PEU_FIABLE = 0.5; // au-delà de 50 % d'écart moyen au test sur le passé, la projection est signalée peu fiable
 const kEuros = (v: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(v / 1000)} k€`;
 const pc = (v: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(v * 100)} %`;
 
@@ -61,16 +62,9 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
   return (
     <>
       {entete}
-      <section className="mb-8">
-        <h2 className="mb-1 font-medium">Recettes par pays</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Ce que chaque pays a rapporté au client, lu dans ses relevés. Aucun montant estimé : un pays sans relevé reste gris.
-        </p>
-        <CartePays donnees={vue.pays ?? []} />
-      </section>
 
       <h2 className="mb-3 font-medium">Chiffre d&apos;affaires mensuel et projection</h2>
-      <form className="mb-8 flex flex-wrap items-end gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+      <form className="mb-6 flex flex-wrap items-end gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
         <label className="text-sm">
           <span className="text-xs text-muted-foreground">Horizon</span>
           <select name="horizon" defaultValue={reglages.horizon} className="mt-1 block rounded-lg border border-input bg-background px-2 py-1.5">
@@ -104,10 +98,7 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
       </form>
 
       {!projection ? (
-        <>
-          <Indisponible message={erreur} />
-          <div className="mt-8"><Avances avances={vue.avances ?? []} compact /></div>
-        </>
+        <Indisponible message={erreur} />
       ) : (
         <>
           <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -115,84 +106,74 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
             <Tuile libelle={`À venir sur ${reglages.horizon} ans`} valeur={euros(projection.avenir)} detail="Estimation" accent />
             <Tuile libelle="Total" valeur={euros(projection.total)} detail="Relevé + à venir" />
             <Tuile libelle="Fourchette du total" valeur={`${kEuros(projection.total_bas)} – ${kEuros(projection.total_haut)}`}
-              detail={`Baisse de ${pc(projection.baisse_min)} à ${pc(projection.baisse_max)} par an · ${
-                projection.fourchette_source === "catalogue" ? "base de l'artiste" : "réglée à la main"}`} />
+              detail={`Baisse de ${pc(projection.baisse_min)} à ${pc(projection.baisse_max)} par an`} />
           </div>
 
           <GraphiqueProjection historique={projection.historique} prevision={projection.prevision} />
 
-          <div className="mt-8"><Avances avances={vue.avances ?? []} compact /></div>
-
-          <section className="rounded-xl bg-card p-5 text-sm ring-1 ring-foreground/10">
-            <h2 className="font-medium">Base de l&apos;artiste</h2>
-            {base?.disponible ? (
-              <>
-                <p className="mt-2 text-muted-foreground">
-                  Calculée uniquement à partir des relevés déposés pour cet artiste, sans aucune donnée d&apos;un autre artiste.
-                  Baisse annuelle mesurée sur <span className="text-foreground">{base.titres_mesures} titres</span> ayant au moins deux ans de relevés,
-                  pondérée par ce qu&apos;ils rapportent aujourd&apos;hui.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Tuile libelle="Baisse moyenne du catalogue" valeur={`${pc(base.baisse_moyenne ?? 0)} / an`} accent />
-                  <Tuile libelle="Titres qui résistent le mieux" valeur={`${pc(base.baisse_basse ?? 0)} / an`} detail="Bas de la fourchette" />
-                  <Tuile libelle="Titres qui baissent le plus vite" valeur={`${pc(base.baisse_haute ?? 0)} / an`} detail="Haut de la fourchette" />
-                </div>
-                <ul className="mt-4 grid gap-x-6 gap-y-1 sm:grid-cols-2">
-                  {base.titres.slice(0, 8).map((t) => (
-                    <li key={t.titre} className="flex justify-between gap-3 border-b border-border py-1.5">
-                      <span className="truncate">{t.titre}</span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">
-                        {t.baisse >= 0 ? `−${pc(t.baisse)}` : `+${pc(-t.baisse)}`} / an
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-xs text-muted-foreground">Les titres qui rapportent le plus aujourd&apos;hui, avec leur baisse annuelle mesurée.</p>
-              </>
-            ) : (
-              <p className="mt-2 flex gap-2 text-muted-foreground">
-                <Info className="mt-0.5 size-4 shrink-0" />
-                Pas encore assez de titres pour calculer la base de cet artiste : {base?.raison} La fourchette réglée à la main est utilisée.
-              </p>
+          {/* L'essentiel du calcul en trois lignes ; le détail reste accessible d'un clic */}
+          <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
+            <li>
+              <span className="text-foreground">Baisse retenue :</span> {pc(projection.baisse_min)} à {pc(projection.baisse_max)} par an,{" "}
+              {projection.fourchette_source === "catalogue" && base?.disponible
+                ? <>mesurée sur {base.titres_mesures} titres de cet artiste (moyenne {pc(base.baisse_moyenne ?? 0)}).</>
+                : <>réglée à la main{base && !base.disponible ? " (pas encore assez de titres pour la mesurer)" : ""}.</>}
+            </li>
+            <li>
+              <span className="text-foreground">Baisse constatée sur tous les revenus :</span> {pc(projection.baisse_mesuree)} par an.
+              {projection.hors_fourchette && <span className="text-warning"> Elle sort de la fourchette.</span>}
+            </li>
+            {ecart !== undefined && (
+              <li className={cn(ecart > ECART_PEU_FIABLE && "text-warning")}>
+                <span className={cn(ecart > ECART_PEU_FIABLE ? "text-warning" : "text-foreground")}>Test sur le passé :</span>{" "}
+                écart moyen de {pc(ecart)} sur {fiab?.tests} essais{ecart > ECART_PEU_FIABLE ? " : projection peu fiable pour ce client." : "."}
+              </li>
             )}
-          </section>
+          </ul>
 
-          <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_1fr]">
-            <section className="rounded-xl bg-card p-5 text-sm ring-1 ring-foreground/10">
-              <h2 className="font-medium">Comment c&apos;est calculé</h2>
-              <p className="mt-2 text-muted-foreground">{projection.methode}</p>
-              <p className="mt-3">Baisse mesurée sur l&apos;ensemble des revenus : <span className="font-medium tabular-nums">{pc(projection.baisse_mesuree)}</span> par an.</p>
-              {projection.hors_fourchette && (
-                <p className="mt-3 flex gap-2 rounded-lg bg-warning/15 px-3 py-2 text-warning">
-                  <Info className="mt-0.5 size-4 shrink-0" />
-                  La baisse mesurée sort de la fourchette : le total estimé sort donc lui aussi de la fourchette.
-                </p>
-              )}
-              {ecart !== undefined && (
-                <p className="mt-3 text-muted-foreground">
-                  Test sur le passé : en cachant les derniers mois et en les prévoyant avec cette méthode, l&apos;écart moyen avec la réalité est de{" "}
-                  <span className="font-medium text-foreground tabular-nums">{pc(ecart)}</span> ({fiab?.tests} essais).
-                </p>
-              )}
-            </section>
-            <section className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-              <Table>
-                <TableHeader>
-                  <TableRow><TableHead>Période</TableHead><TableHead className="text-right">Estimation</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projection.periodes.map((p) => (
-                    <TableRow key={p.label}>
-                      <TableCell>{p.label}</TableCell>
-                      <TableCell className="text-right tabular-nums">{euros(p.valeur)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </section>
-          </div>
+          <details className="group mt-3 rounded-xl bg-card text-sm ring-1 ring-foreground/10">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-muted-foreground hover:text-foreground">
+              <ChevronDown className="size-4 transition-transform group-open:rotate-180" /> Détail du calcul
+            </summary>
+            <div className="grid gap-6 border-t border-border px-4 py-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <p className="text-muted-foreground">{projection.methode}</p>
+                {base?.disponible ? (
+                  <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                    {base.titres.slice(0, 8).map((t) => (
+                      <li key={t.titre} className="flex justify-between gap-3 border-b border-border py-1">
+                        <span className="truncate">{t.titre}</span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">{t.baisse >= 0 ? `−${pc(t.baisse)}` : `+${pc(-t.baisse)}`} / an</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : base?.raison ? (
+                  <p className="mt-3 flex gap-2 text-muted-foreground"><Info className="mt-0.5 size-4 shrink-0" />{base.raison}</p>
+                ) : null}
+              </div>
+              <ul className="space-y-1">
+                {projection.periodes.map((p) => (
+                  <li key={p.label} className="flex justify-between gap-3 border-b border-border py-1">
+                    <span className="text-muted-foreground">{p.label}</span>
+                    <span className="tabular-nums">{euros(p.valeur)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
         </>
       )}
+
+      <div className="mt-8"><Avances avances={vue.avances ?? []} compact /></div>
+
+      <section>
+        <h2 className="mb-1 font-medium">Recettes par pays</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Ce que chaque pays a rapporté au client, lu dans ses relevés. Un pays sans relevé reste gris.
+          {projection ? " Le bouton « Projection » répartit les revenus à venir entre les pays (estimation)." : ""}
+        </p>
+        <CartePays donnees={vue.pays ?? []} avenir={projection?.avenir} horizon={reglages.horizon} />
+      </section>
     </>
   );
 }
