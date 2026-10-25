@@ -49,7 +49,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Charte Traqy, version claire : fond blanc cassé, texte nuit, vert du logo assombri pour rester lisible sur fond clair */
+/* Charte Traqy, version claire : fond blanc cassé, texte nuit, vert #10A06A (proche du logo, lisible sur blanc ; décision de Tom) */
 :root {
   --background: #f7f7f5;
   --foreground: #111317;
@@ -57,8 +57,8 @@
   --card-foreground: #111317;
   --popover: #ffffff;
   --popover-foreground: #111317;
-  --primary: #0e8f5b;
-  --primary-foreground: #ffffff;
+  --primary: #10a06a;
+  --primary-foreground: #0b0d10;
   --secondary: #eeefec;
   --secondary-foreground: #111317;
   --muted: #eeefec;
@@ -69,7 +69,7 @@
   --warning: #a86512;
   --border: oklch(0 0 0 / 9%);
   --input: oklch(0 0 0 / 14%);
-  --ring: #0e8f5b;
+  --ring: #10a06a;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

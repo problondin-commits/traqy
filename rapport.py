@@ -19,10 +19,10 @@ from reportlab.lib.units import mm
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from xml.sax.saxutils import escape
 
-# Charte Traqy : nuit, blanc cassé, vert menthe du logo (une version plus foncée pour le texte sur fond blanc)
+# Charte Traqy : nuit, blanc cassé, vert menthe du logo (#31F2A4), le même vert partout (décision de Tom)
 NUIT = colors.HexColor("#111317")
 MENTHE = colors.HexColor("#31F2A4")
-MENTHE_TEXTE = colors.HexColor("#0E8F5B")
+MENTHE_TEXTE = colors.HexColor("#10A06A")   # vert du logo, juste assez foncé pour se lire sur fond blanc (contraste 3,4:1)
 GRIS = colors.HexColor("#6B7280")
 FILET = colors.HexColor("#E5E7EB")
 FOND = colors.HexColor("#F6F7F5")
@@ -164,7 +164,7 @@ def fiche_oeuvre(o, fuites, en_jeu, largeur):
     """Fiche d'une œuvre : titre, codes, score et contrôles manqués, revenus par type de droit, alertes."""
     c = controles(o, fuites)
     s = round(sum(c) / len(c) * 100)
-    couleur = "#0E8F5B" if s == 100 else ("#B7791F" if s >= 60 else "#C2410C")
+    couleur = "#10A06A" if s == 100 else ("#B7791F" if s >= 60 else "#C2410C")
     manques = [nom for nom, ok in zip(A_CORRIGER, c) if not ok]
     par_type = {}
     for d in o.get("detail") or []:
@@ -286,7 +286,7 @@ def generer(vue, aujourdhui=None):
         h.append(p("Détail et preuves", "h3"))
         for i, f in enumerate(ordre, 1):
             bloc = [p(f"<b>{i}. {t(f.get('oeuvre') or f.get('payeur') or f['regle'])}</b> · {t(f['regle'])} · "
-                      f"<font color='#0E8F5B'><b>{euros(f.get('montant'), 2)}</b></font>"
+                      f"<font color='#10A06A'><b>{euros(f.get('montant'), 2)}</b></font>"
                       + (" <font color='#6B7280'>(estimation)</font>" if f.get("montant") is not None and f.get("estimation") else ""), "texte"),
                     p(f"<b>Méthode :</b> {t(f.get('methode'))}", "petit")]
             for pr in (f.get("preuves") or [])[:6]:

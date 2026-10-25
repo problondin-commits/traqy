@@ -5,8 +5,8 @@ import { euros } from "@/lib/format";
 import type { MoisMontant } from "@/lib/types";
 
 // Une seule série (le chiffre d'affaires mensuel) en deux états : relevé (barres pleines) et prévision (barres hachurées).
-// Vert #18A974 : nuance du vert Traqy validée pour des marques sur fond sombre (contraste et daltonisme).
-const VERT = "#18A974";
+// Vert de la charte : #31F2A4 (logo) en mode sombre, #10A06A en mode clair (variable --primary de globals.css).
+const VERT = "var(--primary)";
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const libelleMois = (m: string) => `${MOIS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
 const compact = (v: number) => new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 }).format(v) + " €";
@@ -33,7 +33,7 @@ export function GraphiqueProjection({ historique, prevision }: { historique: Moi
         <span className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm" style={{ background: VERT }} /> Relevé</span>
           <span className="flex items-center gap-1.5">
-            <svg className="size-3" viewBox="0 0 12 12" aria-hidden><rect width="12" height="12" rx="2" fill="url(#hachures)" stroke={VERT} /></svg>
+            <svg className="size-3" viewBox="0 0 12 12" aria-hidden><rect width="12" height="12" rx="2" fill="url(#hachures)" style={{ stroke: VERT }} /></svg>
             Prévision (estimation)
           </span>
         </span>
@@ -42,8 +42,8 @@ export function GraphiqueProjection({ historique, prevision }: { historique: Moi
         <svg viewBox={`0 0 ${L} ${H}`} className="h-auto w-full" role="img" aria-label="Chiffre d'affaires mensuel relevé puis prévu">
           <defs>
             <pattern id="hachures" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="6" height="6" fill={VERT} fillOpacity="0.18" />
-              <line x1="0" y1="0" x2="0" y2="6" stroke={VERT} strokeWidth="2" />
+              <rect width="6" height="6" style={{ fill: VERT }} fillOpacity="0.18" />
+              <line x1="0" y1="0" x2="0" y2="6" style={{ stroke: VERT }} strokeWidth="2" />
             </pattern>
           </defs>
           {graduations.map((g) => (
@@ -59,7 +59,7 @@ export function GraphiqueProjection({ historique, prevision }: { historique: Moi
             // barre arrondie seulement en haut, posée sur l'axe
             const chemin = `M${x},${H - B} V${H - B - haut + rayon} Q${x},${H - B - haut} ${x + rayon},${H - B - haut} H${x + largeur - rayon} Q${x + largeur},${H - B - haut} ${x + largeur},${H - B - haut + rayon} V${H - B} Z`;
             return (
-              <path key={b.mois} d={chemin} fill={b.prevu ? "url(#hachures)" : VERT}
+              <path key={b.mois} d={chemin} style={{ fill: b.prevu ? "url(#hachures)" : VERT }}
                 opacity={survol === null || survol === i ? 1 : 0.55} />
             );
           })}
