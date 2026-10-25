@@ -37,6 +37,25 @@ export async function derniersImports(): Promise<ImportResume[]> {
   return tous.filter((i) => (vus.has(i.client) ? false : (vus.add(i.client), true)));
 }
 
+/** Rapport d'audit en PDF, fabriqué par le moteur à partir de la vue affichée (démo comprise). */
+export async function rapportPdf(vue: Vue): Promise<{ contenu: ArrayBuffer; nom: string }> {
+  let reponse: Response;
+  try {
+    reponse = await fetch(`${URL_API}/api/v1/rapport`, {
+      method: "POST",
+      headers: { "X-API-Key": CLE_API, "Content-Type": "application/json" },
+      body: JSON.stringify(vue),
+      cache: "no-store",
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch {
+    throw new ErreurMoteur("Le moteur ne répond pas. Il se réveille peut-être : réessayez dans une minute.");
+  }
+  if (!reponse.ok) throw new ErreurMoteur(`Le rapport n'a pas pu être fabriqué (${reponse.status}).`);
+  const nom = /filename="([^"]+)"/.exec(reponse.headers.get("content-disposition") ?? "")?.[1] ?? "Rapport_Audit_Traqy.pdf";
+  return { contenu: await reponse.arrayBuffer(), nom };
+}
+
 export function lireVue(importId: number) {
   return appel<Vue>(`/api/v1/imports/${importId}/vue`);
 }

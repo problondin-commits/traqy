@@ -164,7 +164,7 @@ export const vueDemo: Vue = {
 };
 
 export const rapports: Rapport[] = [
-  { titre: "Rapport d'audit", description: "Synthèse, fuites classées par argent en jeu, manques et méthode de calcul.", format: "PDF" },
+  { titre: "Rapport d'audit", description: "Synthèse, droits non perçus classés par argent en jeu, avances, recettes par pays, manques et méthode.", format: "PDF" },
   { titre: "Dossier de preuves", description: "Chaque fuite avec les lignes de relevés qui la prouvent.", format: "CSV" },
   { titre: "Liste des œuvres et des parts", description: "Catalogue contrôlé : œuvres, ISWC, ISRC, ayants droit et parts.", format: "XML" },
 ];

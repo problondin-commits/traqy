@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BarreLaterale, BarreSquelette } from "@/components/barre-laterale";
+import { Theme } from "@/components/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { chargerDonnees } from "@/lib/donnees";
 import "./globals.css";
@@ -41,16 +42,18 @@ async function BarreAvecDonnees() {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="fr" className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="fr" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col md:flex-row">
-        <TooltipProvider>
-          <Suspense fallback={<BarreSquelette />}>
-            <BarreAvecDonnees />
-          </Suspense>
-          <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 lg:px-12">
-            <div className="mx-auto max-w-6xl">{children}</div>
-          </main>
-        </TooltipProvider>
+        <Theme>
+          <TooltipProvider>
+            <Suspense fallback={<BarreSquelette />}>
+              <BarreAvecDonnees />
+            </Suspense>
+            <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 lg:px-12">
+              <div className="mx-auto max-w-6xl">{children}</div>
+            </main>
+          </TooltipProvider>
+        </Theme>
       </body>
     </html>
   );

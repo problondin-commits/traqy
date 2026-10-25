@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BellRing, ClipboardCheck, FileText, Library, Loader2, TrendingUp, Upload } from "lucide-react";
+import { ChoixTheme, Logo } from "@/components/theme";
 import { cn } from "@/lib/utils";
 import { choisirClient } from "@/lib/actions";
 import type { Choix } from "@/lib/donnees";
@@ -15,8 +16,7 @@ export function BarreSquelette() {
   return (
     <aside className="flex shrink-0 flex-col border-b border-border bg-card/40 md:sticky md:top-0 md:h-screen md:w-64 md:border-r md:border-b-0">
       <div className="px-5 py-4 md:py-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/traqy-logo.svg" alt="Traqy" className="h-7 w-auto" />
+        <Logo className="h-7 w-auto" />
       </div>
       <div className="space-y-2 px-5">
         {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-8 animate-pulse rounded-lg bg-muted/60" />)}
@@ -40,8 +40,7 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes }: Props) 
     <aside className="flex shrink-0 flex-col border-b border-border bg-card/40 md:sticky md:top-0 md:h-screen md:w-64 md:border-r md:border-b-0">
       <div className="flex items-center justify-between gap-3 px-5 py-4 md:py-6">
         <Link href="/depot" aria-label="Traqy, accueil">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/traqy-logo.svg" alt="Traqy" className="h-7 w-auto" />
+          <Logo className="h-7 w-auto" />
         </Link>
         {enCours && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
       </div>
@@ -84,13 +83,15 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes }: Props) 
           );
         })}
       </nav>
-      {demo && (
-        <div className="mt-auto hidden p-5 md:block">
+      <div className="hidden space-y-3 p-5 md:mt-auto md:block">
+        {demo && (
           <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Mode démo.</span> Toutes les données affichées sont fictives.
           </div>
-        </div>
-      )}
+        )}
+        <ChoixTheme />
+      </div>
+      <div className="px-5 pb-3 md:hidden"><ChoixTheme /></div>
     </aside>
   );
 }

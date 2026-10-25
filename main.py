@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, Form, HTTPException, Request, Security, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Request, Security, UploadFile
 from fastapi.responses import Response
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, HttpUrl, model_validator
@@ -22,6 +22,7 @@ import calculs
 import importation
 import pandas as pd
 import projection
+import rapport
 import vues
 
 # Clé d'API : chaque appel doit l'envoyer dans l'en-tête X-API-Key. Elle est lue dans TRAQY_API_KEY
@@ -577,6 +578,17 @@ def decider(fuite_id: int, data: DecisionRequest):
     if not base.decider_fuite(fuite_id, data.decision):
         raise HTTPException(status_code=404, detail="Alerte introuvable.")
     return {"id": fuite_id, "decision": data.decision}
+
+@app.post("/api/v1/rapport")
+def rapport_audit(vue: Dict = Body(...)):
+    """Rapport d'audit en PDF, fabriqué à partir de la vue d'un import (celle que l'interface affiche, démo comprise)."""
+    try:
+        pdf = rapport.generer(vue)
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Données du rapport incomplètes ({e}).")
+    nom = re.sub(r"[^\w]+", "_", vue.get("client") or "client").strip("_")
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="Rapport_Audit_Traqy_{nom}.pdf"'})
 
 @app.get("/api/v1/modele-catalogue")
 def modele_catalogue():
