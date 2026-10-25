@@ -1,8 +1,8 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnTete, Indisponible, Tuile, Vide } from "@/components/elements";
+import { TableauCatalogue } from "@/components/tableau-catalogue";
 import { chargerDonnees } from "@/lib/donnees";
-import { euros, nombre, pourCent } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { euros, nombre } from "@/lib/format";
+import { scoreCatalogue } from "@/lib/score";
 
 export default async function Catalogue() {
   const { vue, erreur } = await chargerDonnees();
@@ -17,49 +17,31 @@ export default async function Catalogue() {
   const revenus = catalogue.reduce((s, o) => s + o.revenus, 0);
   const ayants = catalogue.reduce((s, o) => s + o.ayants_droit, 0);
   const complete = (p: number | null) => p !== null && Math.abs(p - 100) < 0.1;
+  const score = scoreCatalogue(catalogue, vue.fuites);
   return (
     <>
       {entete}
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <Tuile
+          libelle="Score du catalogue"
+          valeur={score === null ? "—" : `${score} %`}
+          detail="Pondéré par les revenus"
+          accent
+        />
         <Tuile libelle="Œuvres" valeur={nombre(catalogue.length)} />
         <Tuile libelle="Parts d'ayants droit" valeur={nombre(ayants)} />
         <Tuile libelle="Parts complètes" valeur={`${catalogue.filter((o) => complete(o.parts_dep)).length} / ${catalogue.length}`} />
-        <Tuile libelle="Revenus relevés" valeur={euros(revenus)} accent />
+        <Tuile libelle="Revenus relevés" valeur={euros(revenus)} />
       </div>
+      <p className="-mt-5 mb-8 text-xs text-muted-foreground">
+        Score : part des 5 contrôles réussis (ISWC, ISRC, parts à 100 %, présence dans les relevés de droits d'auteur, aucune alerte chiffrée ouverte).
+        100 % veut dire que tous les contrôles sont réussis, pas qu'aucun argent ne manque.
+      </p>
 
       {catalogue.length === 0 ? (
         <Vide message="Aucune œuvre : déposez le catalogue du client (œuvres, ayants droit et parts) dans l'écran Dépôt." />
       ) : (
-        <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Titre</TableHead>
-                <TableHead>Artiste</TableHead>
-                <TableHead>ISWC</TableHead>
-                <TableHead>ISRC</TableHead>
-                <TableHead className="text-right">Ayants droit</TableHead>
-                <TableHead className="text-right">Parts (DEP)</TableHead>
-                <TableHead className="text-right">Revenus relevés</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {catalogue.map((o) => (
-                <TableRow key={`${o.titre}-${o.iswc}`}>
-                  <TableCell className="font-medium">{o.titre}</TableCell>
-                  <TableCell className="text-muted-foreground">{o.artiste || "—"}</TableCell>
-                  <TableCell className={cn("font-mono text-xs", !o.iswc && "text-warning")}>{o.iswc ?? "manquant"}</TableCell>
-                  <TableCell className={cn("font-mono text-xs", !o.isrc && "text-warning")}>{o.isrc ?? "manquant"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{o.ayants_droit || "—"}</TableCell>
-                  <TableCell className={cn("text-right tabular-nums", complete(o.parts_dep) ? "text-primary" : "text-warning")}>
-                    {o.parts_dep === null ? "absentes" : pourCent(o.parts_dep)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{o.revenus ? euros(o.revenus) : "—"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <TableauCatalogue lignes={catalogue} fuites={vue.fuites} />
       )}
     </>
   );

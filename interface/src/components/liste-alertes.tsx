@@ -9,6 +9,23 @@ import { euros } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Decision, Fuite } from "@/lib/types";
 
+// « 05d_concord_soldes.csv, ligne 12 : 2025 S2, 1 200 € » devient « Concord soldes, ligne 12 » + le détail,
+// avec le nom du fichier d'origine en petit dessous (il reste la preuve de la source).
+function lirePreuve(p: string): { source: string; detail: string | null; fichier: string | null } {
+  const m = p.match(/^(.+?\.(?:csv|xlsx|xls|zip))(?:\s*›\s*([^,]+))?(?:, ligne (\d+))?(?:\s*:\s*(.*))?$/i);
+  if (!m) return { source: p, detail: null, fichier: null };
+  const [, fichier, onglet, ligne, detail] = m;
+  const nom = fichier
+    .replace(/^.*[\\/]/, "")
+    .replace(/\.(csv|xlsx|xls|zip)$/i, "")
+    .replace(/^[0-9]+[a-z]?[_\- ]+/i, "")
+    .replace(/[_\-]+/g, " ")
+    .trim();
+  const lisible = nom ? nom.charAt(0).toUpperCase() + nom.slice(1) : fichier;
+  const source = [lisible, onglet?.trim(), ligne ? `ligne ${ligne}` : null].filter(Boolean).join(", ");
+  return { source, detail: detail?.trim() || null, fichier };
+}
+
 export function ListeAlertes({ fuites }: { fuites: Fuite[] }) {
   // Le choix s'affiche tout de suite, puis il est enregistré dans la base (sauf en démo).
   const [decisions, setDecisions] = useState<Record<number, Decision | null>>(
@@ -55,7 +72,7 @@ export function ListeAlertes({ fuites }: { fuites: Fuite[] }) {
                   <h2 className="mt-1 text-lg font-medium break-words">{f.oeuvre ?? f.payeur}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {f.payeur ? <>À réclamer à <span className="text-foreground">{f.payeur}</span></> : "Payeur à identifier"}
-                    {f.iswc ? <span className="ml-2 font-mono text-xs">ISWC {f.iswc}</span> : null}
+                    {f.iswc ? <span className="ml-2 text-xs tabular-nums">ISWC {f.iswc}</span> : null}
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
@@ -79,9 +96,16 @@ export function ListeAlertes({ fuites }: { fuites: Fuite[] }) {
                   <div className="mt-3 space-y-3 text-sm">
                     <p>{f.methode}</p>
                     <ul className="space-y-1">
-                      {f.preuves.map((p) => (
-                        <li key={p} className="rounded-md bg-muted px-3 py-1.5 font-mono text-xs break-words text-muted-foreground">{p}</li>
-                      ))}
+                      {f.preuves.map((p) => {
+                        const { source, detail, fichier } = lirePreuve(p);
+                        return (
+                          <li key={p} className="rounded-md bg-muted px-3 py-2 break-words">
+                            <span className="text-foreground">{source}</span>
+                            {detail && <span className="text-muted-foreground"> · {detail}</span>}
+                            {fichier && <span className="mt-0.5 block text-xs text-muted-foreground/70">Fichier : {fichier}</span>}
+                          </li>
+                        );
+                      })}
                     </ul>
                     <p className="text-muted-foreground"><span className="text-foreground">À faire :</span> {f.action}</p>
                   </div>

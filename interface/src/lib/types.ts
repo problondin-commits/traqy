@@ -38,6 +38,14 @@ export type Fuite = {
   decision: Decision | null;
 };
 
+// Revenus d'une œuvre regroupés par année, plateforme et type de droit (pour les filtres du Catalogue)
+export type DetailRevenu = {
+  annee: string; // « 2025 », ou « Non datée »
+  plateforme: string; // « Non précisée » quand le relevé ne la donne pas
+  type: string; // « Droits d'auteur » ou « Enregistrement (master) »
+  montant: number;
+};
+
 // Ligne du catalogue telle qu'affichée (œuvre, ses parts et ses revenus relevés)
 export type LigneCatalogue = {
   titre: string;
@@ -47,6 +55,7 @@ export type LigneCatalogue = {
   ayants_droit: number;
   parts_dep: number | null; // total des parts DEP en %
   revenus: number;
+  detail?: DetailRevenu[]; // absent sur un moteur plus ancien
 };
 
 // Tout ce que les cinq écrans affichent pour un import (réponse de /api/v1/imports/{n}/vue)

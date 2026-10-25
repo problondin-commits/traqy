@@ -98,7 +98,26 @@ const catalogueDemo: LigneCatalogue[] = [
   { titre: "Néon Bleu", artiste: "Kenzo Rive", iswc: "T-901.234.645-0", isrc: "FRZ012500034", ayants_droit: 5, parts_dep: 100, revenus: 2460 },
   { titre: "Interlude 2", artiste: "Nova Lune", iswc: null, isrc: "FRZ012500036", ayants_droit: 2, parts_dep: 100, revenus: 610 },
   { titre: "Archipel", artiste: "Kenzo Rive", iswc: null, isrc: null, ayants_droit: 2, parts_dep: 100, revenus: 0 },
-];
+].map(avecDetailDemo);
+
+// Détail inventé des revenus de démo : 40 % de droits d'auteur, 60 % de master réparti entre trois plateformes,
+// sur 2025 et 2026. La somme du détail est égale aux revenus de la ligne.
+function avecDetailDemo(l: LigneCatalogue): LigneCatalogue {
+  const parts: [string, string, string, number][] = [
+    ["2025", "Non précisée", "Droits d'auteur", 0.22], ["2026", "Non précisée", "Droits d'auteur", 0.18],
+    ["2025", "Spotify", "Enregistrement (master)", 0.17], ["2026", "Spotify", "Enregistrement (master)", 0.13],
+    ["2025", "Apple Music", "Enregistrement (master)", 0.08], ["2026", "Apple Music", "Enregistrement (master)", 0.07],
+    ["2025", "YouTube", "Enregistrement (master)", 0.08], ["2026", "YouTube", "Enregistrement (master)", 0.07],
+  ];
+  if (!l.revenus) return { ...l, detail: [] };
+  let reste = l.revenus;
+  const detail = parts.map(([annee, plateforme, type, part], i) => {
+    const montant = i === parts.length - 1 ? reste : Math.round(l.revenus * part);
+    reste -= montant;
+    return { annee, plateforme, type, montant };
+  });
+  return { ...l, detail };
+}
 
 // Chiffre d'affaires mensuel inventé (juillet 2023 à juin 2026), titre par titre : chaque titre démarre fort
 // puis baisse à son propre rythme. Le total du label est la somme des titres.
