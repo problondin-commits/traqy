@@ -61,6 +61,15 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
   return (
     <>
       {entete}
+      <section className="mb-8">
+        <h2 className="mb-1 font-medium">Recettes par pays</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Ce que chaque pays a rapporté au client, lu dans ses relevés. Aucun montant estimé : un pays sans relevé reste gris.
+        </p>
+        <CartePays donnees={vue.pays ?? []} />
+      </section>
+
+      <h2 className="mb-3 font-medium">Chiffre d&apos;affaires mensuel et projection</h2>
       <form className="mb-8 flex flex-wrap items-end gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
         <label className="text-sm">
           <span className="text-xs text-muted-foreground">Horizon</span>
@@ -95,7 +104,10 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
       </form>
 
       {!projection ? (
-        <Indisponible message={erreur} />
+        <>
+          <Indisponible message={erreur} />
+          <div className="mt-8"><Avances avances={vue.avances ?? []} compact /></div>
+        </>
       ) : (
         <>
           <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -109,7 +121,9 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
 
           <GraphiqueProjection historique={projection.historique} prevision={projection.prevision} />
 
-          <section className="mt-6 rounded-xl bg-card p-5 text-sm ring-1 ring-foreground/10">
+          <div className="mt-8"><Avances avances={vue.avances ?? []} compact /></div>
+
+          <section className="rounded-xl bg-card p-5 text-sm ring-1 ring-foreground/10">
             <h2 className="font-medium">Base de l&apos;artiste</h2>
             {base?.disponible ? (
               <>
@@ -179,18 +193,6 @@ export default async function Projection({ searchParams }: PageProps<"/projectio
           </div>
         </>
       )}
-
-      <div className="mt-8">
-        <Avances avances={vue.avances ?? []} compact />
-      </div>
-
-      <section className="mt-2">
-        <h2 className="mb-1 font-medium">Recettes par pays</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Ce que chaque pays a rapporté au client, lu dans ses relevés. Aucun montant estimé : un pays sans relevé reste gris.
-        </p>
-        <CartePays donnees={vue.pays ?? []} />
-      </section>
     </>
   );
 }
