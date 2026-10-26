@@ -266,7 +266,7 @@
       + (dansCadre(PARIS, cadre) ? `<circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="${7 * k}" style="fill:var(--fond);stroke:var(--vert);stroke-width:${2.5 * k};pointer-events:none"/><circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="${3 * k}" style="fill:var(--vert);pointer-events:none"/>` : "");
     const rang = Object.entries(PAYS_DEMO).sort((a, b) => b[1] - a[1]).map(([c]) => c);
     const liste = Object.entries(valeurs).filter(([c]) => zoneCarte === "monde" || dansCadre(CENTRES[c], cadre)).sort((a, b) => b[1] - a[1]);
-    const onglets = [["releve", "Recettes"], ["taux", "Pour 1 000 écoutes"], ["projection", "Projection 5 ans"]]
+    const onglets = [["releve", "Recettes"], ["projection", "Projection 5 ans"]]
       .map(([m, l]) => `<button type="button" data-carte="${m}" class="${modeCarte === m ? "actif" : ""}">${l}</button>`).join("");
     const zones = ZONES.map(([z, l]) => `<button type="button" data-zone="${z}" class="${zoneCarte === z ? "actif" : ""}">${l}</button>`).join("");
     const explication = { releve: "Ce que chaque pays a rapporté, lu dans les relevés. Touchez un pays pour sa fiche.", taux: "Ce que rapportent réellement 1 000 écoutes dans chaque pays, calculé sur les relevés du client.", projection: "Estimation : les 98 400 € à venir répartis selon la part de chaque pays sur les 12 derniers mois." }[modeCarte];

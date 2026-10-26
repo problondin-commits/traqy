@@ -75,7 +75,6 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
   const [mode, setMode] = useState<Mode>("recettes");
   const [zone, setZone] = useState<Zone>("monde");
   const projetable = avenir !== undefined && avenir > 0;
-  const avecTaux = donnees.some((d) => d.pour_1000);
 
   // Valeur affichée de chaque pays selon le mode
   const parCode = useMemo(() => {
@@ -115,7 +114,6 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-lg bg-card p-1 ring-1 ring-foreground/10" role="group" aria-label="Ce que montre la carte">
           <button type="button" className={onglet(mode === "recettes")} aria-pressed={mode === "recettes"} onClick={() => setMode("recettes")}>Recettes</button>
-          {avecTaux && <button type="button" className={onglet(mode === "taux")} aria-pressed={mode === "taux"} onClick={() => setMode("taux")}>Pour 1 000 écoutes</button>}
           {projetable && <button type="button" className={onglet(mode === "projection")} aria-pressed={mode === "projection"} onClick={() => setMode("projection")}>Projection{horizon ? ` ${horizon} ans` : ""}</button>}
         </div>
         <div className="inline-flex flex-wrap rounded-lg bg-muted p-1" role="group" aria-label="Zone de la carte">
