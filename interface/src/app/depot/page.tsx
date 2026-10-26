@@ -21,7 +21,7 @@ function dateFr(iso: string | null) {
 }
 
 export default async function Depot() {
-  const { vue, demo, erreur } = await chargerDonnees();
+  const { vue, demo, erreur, role } = await chargerDonnees();
   return (
     <>
       <EnTete
@@ -30,7 +30,13 @@ export default async function Depot() {
         action={<Button nativeButton={false} render={<Link href="/manques" />}>Voir le contrôle des manques</Button>}
       />
 
-      <ZoneDepot clientActuel={demo ? null : vue?.client ?? null} moteurBranche={moteurConfigure()} />
+      {role.type === "client" ? (
+        <p className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+          Vos fichiers sont déposés par Traqy. Pour ajouter un relevé ou un catalogue, envoyez-le-nous.
+        </p>
+      ) : (
+        <ZoneDepot clientActuel={demo ? null : vue?.client ?? null} moteurBranche={moteurConfigure() && role.type === "admin"} />
+      )}
 
       <div className="mt-10">
         <h2 className="text-base font-medium">Dernier dépôt</h2>

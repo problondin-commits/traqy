@@ -1,6 +1,8 @@
-// Choisit les données à afficher : le client choisi (cookie « traqy_import ») ou le mode démo.
+// Choisit les données à afficher selon l'accès (lib/acces.ts) : le client choisi (cookie « traqy_import »)
+// pour Tom, les seuls dossiers du client pour un lien client, la démo pour tous les autres.
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { roleActuel, type Role } from "./acces";
 import { derniersImports, ErreurMoteur, lireVue, moteurConfigure } from "./api";
 import { CLIENT_DEMO, vueDemo } from "./demo";
 import type { Vue } from "./types";
@@ -16,24 +18,30 @@ export type Donnees = {
   choix: Choix[];
   actuel: string;
   erreur: string | null;
+  role: Role;
 };
 
 // Une seule lecture par affichage de page, même si la barre et la page en ont besoin toutes les deux.
 export const chargerDonnees = cache(async (): Promise<Donnees> => {
+  const role = await roleActuel();
   const choixDemo: Choix = { valeur: DEMO, libelle: `${CLIENT_DEMO} (démo)` };
-  if (!moteurConfigure()) {
-    return { vue: vueDemo, demo: true, choix: [choixDemo], actuel: DEMO, erreur: null };
-  }
+  const demoSeule: Donnees = { vue: vueDemo, demo: true, choix: [choixDemo], actuel: DEMO, erreur: null, role };
+  if (!moteurConfigure() || role.type === "public") return demoSeule;
+
   const demande = (await cookies()).get(COOKIE_IMPORT)?.value;
   try {
     const imports = await derniersImports();
-    const choix = [...imports.map((i) => ({ valeur: String(i.id), libelle: i.client })), choixDemo];
+    const permis = role.type === "client" ? imports.filter((i) => i.client === role.client) : imports;
+    const choix = [...permis.map((i) => ({ valeur: String(i.id), libelle: i.client })), ...(role.type === "admin" ? [choixDemo] : [])];
+    if (!choix.length) {
+      return { vue: null, demo: false, choix, actuel: "", erreur: "Aucun dossier n'est encore disponible pour cet accès.", role };
+    }
     const actuel = demande && choix.some((c) => c.valeur === demande) ? demande : choix[0].valeur;
-    if (actuel === DEMO) return { vue: vueDemo, demo: true, choix, actuel, erreur: null };
-    return { vue: await lireVue(Number(actuel)), demo: false, choix, actuel, erreur: null };
+    if (actuel === DEMO) return { ...demoSeule, choix, actuel };
+    return { vue: await lireVue(Number(actuel)), demo: false, choix, actuel, erreur: null, role };
   } catch (e) {
-    if (demande === DEMO) return { vue: vueDemo, demo: true, choix: [choixDemo], actuel: DEMO, erreur: null };
+    if (role.type === "admin" && demande === DEMO) return { ...demoSeule };
     const message = e instanceof ErreurMoteur ? e.message : "Erreur inattendue en lisant les données.";
-    return { vue: null, demo: false, choix: [choixDemo], actuel: demande ?? "", erreur: message };
+    return { vue: null, demo: false, choix: role.type === "admin" ? [choixDemo] : [], actuel: demande ?? "", erreur: message, role };
   }
 });

@@ -46,6 +46,7 @@ async function BarreAvecDonnees() {
       choix={d.choix}
       actuel={d.actuel}
       demo={d.demo}
+      verrouille={d.role.type !== "admin"}
       manques={d.vue?.manques.length ?? 0}
       alertes={d.vue?.fuites.length ?? 0}
     />

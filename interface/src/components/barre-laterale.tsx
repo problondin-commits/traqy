@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { choisirClient } from "@/lib/actions";
 import type { Choix } from "@/lib/donnees";
 
-type Props = { choix: Choix[]; actuel: string; demo: boolean; manques: number; alertes: number };
+// verrouille : accès client ou démo, le menu Client est remplacé par le nom du dossier (pas de changement possible)
+type Props = { choix: Choix[]; actuel: string; demo: boolean; manques: number; alertes: number; verrouille?: boolean };
 
 /** Barre affichée pendant le chargement de la liste des clients. */
 export function BarreSquelette() {
@@ -25,7 +26,7 @@ export function BarreSquelette() {
   );
 }
 
-export function BarreLaterale({ choix, actuel, demo, manques, alertes }: Props) {
+export function BarreLaterale({ choix, actuel, demo, manques, alertes, verrouille = false }: Props) {
   const chemin = usePathname();
   const [enCours, demarrer] = useTransition();
   const ecrans = [
@@ -36,7 +37,11 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes }: Props) 
     { href: "/projection", libelle: "Projection", icone: TrendingUp },
     { href: "/rapports", libelle: "Rapports", icone: FileText },
   ];
-  const menuClient = (
+  const menuClient = verrouille ? (
+    <p className="truncate rounded-lg border border-input bg-card px-2 py-1.5 text-sm font-medium md:mt-1">
+      {choix.find((c) => c.valeur === actuel)?.libelle ?? "—"}
+    </p>
+  ) : (
     <select
       value={actuel}
       disabled={enCours}
