@@ -1,0 +1,18 @@
+# Traqy · Garde le moteur en ligne éveillé. L'offre gratuite de Render l'endort après 15 minutes sans visite,
+# et il met ensuite près d'une minute à se réveiller : sur téléphone, la page semble ne pas s'ouvrir.
+# GitHub visite donc la page d'accueil du moteur (ouverte, sans clé) toutes les 10 minutes environ.
+# Une seule instance éveillée en permanence tient dans les 750 heures gratuites par mois de Render.
+name: Moteur éveillé
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  visite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Petite visite du moteur
+        run: curl -fsS --max-time 120 https://traqy-api.onrender.com/ || echo "Le moteur n'a pas répondu à temps (il se réveille)."
