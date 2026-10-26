@@ -29,7 +29,8 @@ import pandas as pd
 
 import controle
 import fuites
-from modele import Avance, BilanFichier, Categorie, Enregistrement, Import, Oeuvre, Part, Revenu, RevenuPays, Solde
+from modele import (Avance, BilanFichier, Categorie, DetailPays, Enregistrement, Import, Oeuvre, Part, Revenu, RevenuPays,
+                    Solde)
 
 MOIS_NOMS = {m: i for i, m in enumerate(["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
                                           "août", "septembre", "octobre", "novembre", "décembre"], start=1)}
@@ -237,6 +238,23 @@ def traduire_releve_traqy(d, nom, categorie, champs, res, bilan):
         res.revenus.append(Revenu(categorie=categorie, fichier=nom, ligne=i + 2, **valeurs))
         bilan.lignes_importees += 1
 
+RECETTES_PAYS = {Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_physiques, Categorie.droits_voisins,
+                 Categorie.autres_revenus}
+DETAIL_MAX = 10   # valeurs gardées par pays et par dimension (titres, plateformes)
+
+def reduire_detail_pays(lignes):
+    """Fusionne le détail par pays de tous les fichiers et ne garde que les 10 premières valeurs de chaque pays."""
+    total = {}
+    for d in lignes:
+        cle = (d.pays, d.dimension, d.valeur)
+        m, q = total.get(cle, (0.0, 0.0))
+        total[cle] = (m + d.montant, q + (d.quantite or 0))
+    groupes = {}
+    for (pays, dimension, valeur), (m, q) in total.items():
+        groupes.setdefault((pays, dimension), []).append(DetailPays(pays=pays, dimension=dimension, valeur=valeur,
+                                                                   montant=round(m, 2), quantite=round(q)))
+    return [d for g in groupes.values() for d in sorted(g, key=lambda d: -d.montant)[:DETAIL_MAX] if d.montant > 0]
+
 TYPES_DISTRIBUTEUR = {"Physical Sales": Categorie.ventes_physiques, "Neighboring Rights": Categorie.droits_voisins,
                       "Expense": Categorie.frais, "Costs": Categorie.frais, "Advance": Categorie.avance,
                       "Income": Categorie.autres_revenus}
@@ -310,6 +328,14 @@ def traduire_distributeur(d, nom, res, bilan):
         res.revenus_pays.append(RevenuPays(pays=l.pays.upper(), categorie=l.categorie, periode=vide(l.periode),
                                            contrat=vide(l.contrat), quantite=round(float(l.quantite), 4),
                                            montant=round(float(l.montant), 6), fichier=nom))
+    # 3. Détail de chaque pays par titre et par plateforme (recettes seulement), fusionné et réduit en fin d'import
+    recettes = t[(t["pays"] != "") & t["categorie"].isin(list(RECETTES_PAYS))]
+    for dimension, colonne in (("titre", "titre"), ("plateforme", "plateforme")):
+        g = recettes[recettes[colonne] != ""].groupby(["pays", colonne], sort=False).agg(
+            montant=("montant", "sum"), quantite=("quantite", "sum")).reset_index()
+        for l in g.itertuples(index=False):
+            res.detail_pays.append(DetailPays(pays=l.pays.upper(), dimension=dimension, valeur=getattr(l, colonne),
+                                              montant=float(l.montant), quantite=float(l.quantite)))
     bilan.lignes_importees += int(len(t))
     # Enregistrements (un par ISRC) : titre de la piste, album, artiste
     pistes = t[(t["isrc"] != "") & (t["titre"] != "")].drop_duplicates("isrc")
@@ -473,6 +499,7 @@ def importer(fichiers):
     res.parts = sans_doublons_entre_fichiers(parts_par_tableau)
     res.soldes = fusionner(res.soldes, lambda s: (s.payeur, s.compte, s.periode))
     res.avances = fusionner(res.avances, lambda a: a.contrat)
+    res.detail_pays = reduire_detail_pays(res.detail_pays)
     res.manques = controle.controler(res)
     res.fuites = fuites.detecter(res)
     res.resume = {

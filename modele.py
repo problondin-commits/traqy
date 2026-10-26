@@ -105,6 +105,16 @@ class RevenuPays(BaseModel):
     fichier: str
 
 
+class DetailPays(BaseModel):
+    """Détail des recettes d'un pays, tous relevés confondus, pour la fiche pays de la carte.
+    dimension : « titre » ou « plateforme ». Seules les 10 premières valeurs de chaque pays sont gardées."""
+    pays: str
+    dimension: str
+    valeur: str
+    montant: float
+    quantite: Optional[float] = None
+
+
 class Avance(BaseModel):
     """Avance versée sur un contrat (ex. coproduction). Son montant est déclaré par le client : les relevés
     ne montrent que le recoupement, période par période (lignes « Advance » négatives)."""
@@ -170,6 +180,7 @@ class Import(BaseModel):
     soldes: List[Solde] = Field(default_factory=list)
     avances: List[Avance] = Field(default_factory=list)
     revenus_pays: List[RevenuPays] = Field(default_factory=list)
+    detail_pays: List[DetailPays] = Field(default_factory=list)
     fichiers: List[BilanFichier] = Field(default_factory=list)
     manques: List[Manque] = Field(default_factory=list)
     fuites: List[Fuite] = Field(default_factory=list)

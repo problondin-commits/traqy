@@ -78,7 +78,17 @@ export type Avance = {
 
 // Recettes par pays (code à deux lettres), lues dans les relevés
 // « recent » : recettes des 12 derniers mois relevés, pour répartir la projection entre les pays
-export type RevenuPays = { pays: string; montant: number; quantite: number; recent?: number };
+export type DetailPays = { nom: string; montant: number; quantite: number | null };
+export type RevenuPays = {
+  pays: string;
+  montant: number;
+  quantite: number;
+  recent?: number;
+  rang?: number;
+  pour_1000?: number | null; // part du client pour 1 000 écoutes en streaming dans ce pays (lue dans ses relevés)
+  titres?: DetailPays[];
+  plateformes?: DetailPays[];
+};
 
 // Tout ce que les cinq écrans affichent pour un import (réponse de /api/v1/imports/{n}/vue)
 export type Vue = {

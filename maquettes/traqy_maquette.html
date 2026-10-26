@@ -100,6 +100,11 @@
   .monde { width: 100%; height: auto; display: block; margin: 10px 0 6px; }
   .bascule.petite button { font-size: 11px; padding: 4px 8px; }
   .pc .deux + .carte { margin-top: 0; }
+  .bascule.zones { background: transparent; flex-wrap: wrap; }
+  .bascule.zones button { padding: 3px 8px; }
+  .ligne-pays { width: 100%; border: 0; border-bottom: 1px solid var(--filet); background: none; color: var(--texte); font: inherit; cursor: pointer; text-align: left; }
+  .fiche { margin-top: 8px; padding: 12px; border-radius: 12px; background: var(--muted); }
+  .fermer { border: 0; background: var(--carte); color: var(--gris); width: 28px; height: 28px; border-radius: 8px; font-size: 18px; cursor: pointer; }
   button:focus-visible { outline: 2px solid var(--vert); outline-offset: 2px; }
   .loupe { width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; }
   /* Sur un vrai téléphone : l'app seule, en plein écran, barre d'onglets en bas */
@@ -236,29 +241,52 @@
   const A_VENIR = 98400;
   let modeCarte = "releve";
   const euros = (v) => Math.round(v).toLocaleString("fr-FR").replace(/\u202f/g, " ") + " €";
+  // Outils de l'ancienne carte WpointM : onglets, zones, traits depuis Paris et fiche pays au toucher (données inventées)
+  const CADRES = {"monde":[0,0,960,470],"europe":[408.3,47.5,194.5,125],"afrique":[418,143.9,218.4,247.9],"ameriques":[13.2,44.9,415,408.1],"asie":[527.3,77.5,365.6,239]};
+  const ZONES = [["monde", "Monde"], ["europe", "Europe"], ["afrique", "Afrique"], ["ameriques", "Amériques"], ["asie", "Asie"]];
+  const POUR_1000 = { FR: 1.62, BE: 1.42, CH: 2.22, CA: 1.23, MA: 0.41, DE: 1.71, US: 1.38, CI: 0.22, GB: 2.05, SN: 0.19 };
+  const TITRES = ["Minuit Pile", "Ciel Ouvert", "Ligne 7", "Rive Gauche"], PLATEFORMES = ["Spotify", "Deezer", "Apple Music", "YouTube"];
+  let zoneCarte = "monde", paysChoisi = null;
+  const dansCadre = ([x, y], [cx, cy, l, h]) => x >= cx && x <= cx + l && y >= cy && y <= cy + h;
   function carteMonde() {
     const total = Object.values(PAYS_DEMO).reduce((a, b) => a + b, 0);
-    const valeurs = Object.fromEntries(Object.entries(PAYS_DEMO).map(([c, m]) => [c, modeCarte === "releve" ? m : (m / total) * A_VENIR]));
+    const valeurs = Object.fromEntries(Object.entries(PAYS_DEMO).map(([c, m]) => [c, modeCarte === "taux" ? POUR_1000[c] : modeCarte === "releve" ? m : (m / total) * A_VENIR]));
+    const affiche = (v) => modeCarte === "taux" ? v.toFixed(2).replace(".", ",") + " €" : euros(v);
     const max = Math.max(...Object.values(valeurs));
-    const intensite = (m) => (0.18 + 0.82 * Math.log10(1 + m) / Math.log10(1 + max)).toFixed(3);
+    const intensite = (m) => (0.18 + 0.82 * (modeCarte === "taux" ? m / max : Math.log10(1 + m) / Math.log10(1 + max))).toFixed(3);
+    const cadre = CADRES[zoneCarte], k = cadre[2] / 960;
     const chemins = CARTE.map(([c, d]) => {
       const v = valeurs[c];
-      return `<path d="${d}" style="fill:${v ? "var(--vert)" : "var(--muted)"};fill-opacity:${v ? intensite(v) : 1};stroke:var(--fond);stroke-width:.5"><title>${v ? NOMS[c] + " : " + euros(v) + (modeCarte === "releve" ? "" : " (estimation)") : "Pas de relevé"}</title></path>`;
+      return `<path d="${d}" ${v ? `data-pays="${c}"` : ""} vector-effect="non-scaling-stroke" style="fill:${v ? "var(--vert)" : "var(--muted)"};fill-opacity:${v ? intensite(v) : 1};stroke:var(--fond);stroke-width:.6;${v ? "cursor:pointer" : ""}"><title>${v ? NOMS[c] + " : " + affiche(v) + (modeCarte === "projection" ? " (estimation)" : "") : "Pas de relevé"}</title></path>`;
     }).join("");
-    const liste = Object.entries(valeurs).sort((a, b) => b[1] - a[1]).slice(0, 6)
-      .map(([c, v]) => `<div class="pays"><span>${NOMS[c]}</span><span>${euros(v)}</span></div>`).join("");
-    const somme = Object.values(valeurs).reduce((a, b) => a + b, 0);
-    const dest = Object.entries(valeurs).filter(([c]) => c !== "FR" && CENTRES[c]).sort((a, b) => b[1] - a[1]).slice(0, 20);
-    const maxD = Math.max(1, ...dest.map(([, v]) => v));
-    const traits = dest.map(([c, v]) => `<path d="${trait(PARIS, CENTRES[c])}" style="fill:none;stroke:var(--texte);stroke-opacity:.35;stroke-linecap:round;stroke-width:${(0.6 + 2.6 * Math.sqrt(v / maxD)).toFixed(2)}"/>`).join("")
-      + dest.map(([c, v]) => `<circle cx="${CENTRES[c][0]}" cy="${CENTRES[c][1]}" r="${(2 + 5 * Math.sqrt(v / maxD)).toFixed(1)}" style="fill:var(--vert);stroke:var(--fond);stroke-width:1.2"><title>${NOMS[c]} : ${euros(v)}</title></circle>`).join("")
-      + `<circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="7" style="fill:var(--fond);stroke:var(--vert);stroke-width:2.5"/><circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="3" style="fill:var(--vert)"/>`;
+    const dest = Object.entries(valeurs).filter(([c]) => c !== "FR" && CENTRES[c] && dansCadre(CENTRES[c], cadre)).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    const maxD = Math.max(1e-9, ...dest.map(([, v]) => v));
+    const traits = (modeCarte === "taux" ? "" : dest.map(([c, v]) => `<path d="${trait(PARIS, CENTRES[c])}" vector-effect="non-scaling-stroke" style="fill:none;pointer-events:none;stroke:${c === paysChoisi ? "var(--vert)" : "var(--texte)"};stroke-opacity:${c === paysChoisi ? .95 : .35};stroke-linecap:round;stroke-width:${(0.6 + 2.6 * Math.sqrt(v / maxD)).toFixed(2)}"/>`).join(""))
+      + dest.map(([c, v]) => `<circle data-pays="${c}" cx="${CENTRES[c][0]}" cy="${CENTRES[c][1]}" r="${((2 + 5 * Math.sqrt(v / maxD)) * k).toFixed(2)}" style="cursor:pointer;fill:${c === paysChoisi ? "var(--texte)" : "var(--vert)"};stroke:var(--fond);stroke-width:${(1.2 * k).toFixed(2)}"><title>${NOMS[c]} : ${affiche(v)}</title></circle>`).join("")
+      + (dansCadre(PARIS, cadre) ? `<circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="${7 * k}" style="fill:var(--fond);stroke:var(--vert);stroke-width:${2.5 * k};pointer-events:none"/><circle cx="${PARIS[0]}" cy="${PARIS[1]}" r="${3 * k}" style="fill:var(--vert);pointer-events:none"/>` : "");
+    const rang = Object.entries(PAYS_DEMO).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+    const liste = Object.entries(valeurs).filter(([c]) => zoneCarte === "monde" || dansCadre(CENTRES[c], cadre)).sort((a, b) => b[1] - a[1]);
+    const onglets = [["releve", "Recettes"], ["taux", "Pour 1 000 écoutes"], ["projection", "Projection 5 ans"]]
+      .map(([m, l]) => `<button type="button" data-carte="${m}" class="${modeCarte === m ? "actif" : ""}">${l}</button>`).join("");
+    const zones = ZONES.map(([z, l]) => `<button type="button" data-zone="${z}" class="${zoneCarte === z ? "actif" : ""}">${l}</button>`).join("");
+    const explication = { releve: "Ce que chaque pays a rapporté, lu dans les relevés. Touchez un pays pour sa fiche.", taux: "Ce que rapportent réellement 1 000 écoutes dans chaque pays, calculé sur les relevés du client.", projection: "Estimation : les 98 400 € à venir répartis selon la part de chaque pays sur les 12 derniers mois." }[modeCarte];
+    let bas;
+    if (paysChoisi) {
+      const c = paysChoisi, m = PAYS_DEMO[c];
+      const part = (x) => TITRES.map((t, i) => [t, m * [0.46, 0.28, 0.16, 0.10][i]]);
+      bas = `<div class="fiche"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p class="info">Rang ${rang.indexOf(c) + 1} sur ${rang.length} pays</p><div class="titre" style="font-size:16px;font-weight:600">${NOMS[c]}</div></div><button type="button" class="fermer" data-fermer aria-label="Fermer la fiche">×</button></div>
+        ${[["Recettes", euros(m)], ["Part du total", (m / total * 100).toFixed(1).replace(".", ",") + " %"], ["Pour 1 000 écoutes", POUR_1000[c].toFixed(2).replace(".", ",") + " €"], ["À venir, 5 ans", euros(m / total * A_VENIR) + " est."]].map(([a, b]) => `<div class="pays"><span>${a}</span><span>${b}</span></div>`).join("")}
+        <p class="info" style="margin-top:10px">Titres qui rapportent le plus</p>${part().map(([t, v]) => `<div class="pays"><span>${t}</span><span>${euros(v)}</span></div>`).join("")}
+        <p class="info" style="margin-top:10px">Plateformes</p>${PLATEFORMES.map((p, i) => `<div class="pays"><span>${p}</span><span>${euros(m * [0.5, 0.25, 0.15, 0.1][i])}</span></div>`).join("")}</div>`;
+    } else {
+      bas = `<div style="margin-top:6px">${liste.slice(0, 6).map(([c, v]) => `<button type="button" class="pays ligne-pays" data-pays="${c}"><span>${NOMS[c]}</span><span>${affiche(v)}</span></button>`).join("")}</div><p class="info" style="margin-top:6px">Touchez un pays pour voir sa fiche.</p>`;
+    }
     return `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <div class="titre" style="font-size:13px;font-weight:600">Recettes par pays</div>
-      <div class="bascule petite">${[["releve", "Relevé"], ["projection", "Projection 5 ans"]].map(([m, l]) => `<button type="button" data-carte="${m}" class="${modeCarte === m ? "actif" : ""}">${l}</button>`).join("")}</div></div>
-      <svg class="monde" viewBox="0 0 960 470" role="img" aria-label="Carte des recettes par pays">${chemins}${traits}</svg>
-      <p class="info">${modeCarte === "releve" ? "Lu dans les relevés du client. Traits depuis Paris vers les pays qui rapportent le plus. Gris : pas de relevé." : "Estimation : les 98 400 € à venir répartis selon la part de chaque pays sur les 12 derniers mois."}</p>
-      <div style="margin-top:6px">${liste}</div><p class="info" style="margin-top:6px">${Object.keys(valeurs).length} pays · ${euros(somme)}${modeCarte === "releve" ? " relevés" : " à venir"}</p></div>`;
+      <div class="titre" style="font-size:13px;font-weight:600">Recettes par pays</div></div>
+      <div class="bascule petite" style="margin-top:8px">${onglets}</div>
+      <div class="bascule petite zones" style="margin-top:6px">${zones}</div>
+      <svg class="monde" viewBox="${cadre.join(" ")}" role="img" aria-label="Carte des recettes par pays">${chemins}${traits}</svg>
+      <p class="info">${explication}</p>${bas}</div>`;
   }
   let telActif = "catalogue", pcActif = "catalogue";
   function rendre() {
@@ -274,11 +302,14 @@
   }
   document.addEventListener("click", (ev) => {
     if (ev.target.closest("[data-bascule]")) { appliquerTheme(themeActuel() === "clair" ? "sombre" : "clair"); return; }
-    const t = ev.target.closest("[data-ecran],[data-pc],[data-theme],[data-carte]");
+    const t = ev.target.closest("[data-ecran],[data-pc],[data-theme],[data-carte],[data-zone],[data-pays],[data-fermer]");
     if (!t) return;
     if (t.dataset.ecran) telActif = t.dataset.ecran;
     if (t.dataset.pc) pcActif = t.dataset.pc;
     if (t.dataset.carte) modeCarte = t.dataset.carte;
+    if (t.dataset.zone) { zoneCarte = t.dataset.zone; }
+    if (t.dataset.pays) paysChoisi = t.dataset.pays;
+    if (t.hasAttribute("data-fermer")) paysChoisi = null;
     if (t.dataset.theme) appliquerTheme(t.dataset.theme);
     rendre();
   });

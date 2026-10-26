@@ -142,14 +142,29 @@ def pays(imp):
     lignes = [r for r in imp.revenus_pays if r.categorie in RECETTES]
     debuts = {p: lire_periode(p)[0] for p in {r.periode for r in lignes}}
     recents = set(sorted((p for p, d in debuts.items() if d), key=lambda p: debuts[p])[-2:])
-    total = defaultdict(lambda: [0.0, 0.0, 0.0])
+    total = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0])   # montant, quantité, récent, streaming (montant, écoutes)
     for r in lignes:
-        total[r.pays][0] += r.montant
-        total[r.pays][1] += r.quantite or 0
+        t = total[r.pays]
+        t[0] += r.montant
+        t[1] += r.quantite or 0
         if r.periode in recents:
-            total[r.pays][2] += r.montant
-    return sorted(({"pays": p, "montant": round(m, 2), "quantite": round(q), "recent": round(rc, 2)}
-                   for p, (m, q, rc) in total.items()), key=lambda x: -x["montant"])
+            t[2] += r.montant
+        if r.categorie == Categorie.streaming:
+            t[3] += r.montant
+            t[4] += r.quantite or 0
+    detail = defaultdict(lambda: {"titre": [], "plateforme": []})
+    for d in imp.detail_pays:
+        detail[d.pays][d.dimension].append({"nom": d.valeur, "montant": d.montant, "quantite": d.quantite})
+    sortie = sorted(({
+        "pays": p, "montant": round(m, 2), "quantite": round(q), "recent": round(rc, 2),
+        # revenu réel du client pour 1 000 écoutes en streaming dans ce pays (lu dans ses relevés, aucun barème)
+        "pour_1000": round(sm / se * 1000, 3) if se >= 1000 and sm > 0 else None,
+        "titres": sorted(detail[p]["titre"], key=lambda x: -x["montant"])[:5],
+        "plateformes": sorted(detail[p]["plateforme"], key=lambda x: -x["montant"])[:5],
+    } for p, (m, q, rc, sm, se) in total.items()), key=lambda x: -x["montant"])
+    for i, x in enumerate(sortie, 1):
+        x["rang"] = i
+    return sortie
 
 
 def vue(imp, cree_le=None):

@@ -17,7 +17,8 @@ from sqlalchemy import (Boolean, Column, Date, DateTime, Float, ForeignKey, Inte
                         create_engine, insert, select, text)
 from sqlalchemy.dialects.postgresql import JSONB
 
-from modele import Avance, BilanFichier, Enregistrement, Fuite, Import, Manque, Oeuvre, Part, Revenu, RevenuPays, Solde
+from modele import (Avance, BilanFichier, DetailPays, Enregistrement, Fuite, Import, Manque, Oeuvre, Part, Revenu, RevenuPays,
+                    Solde)
 
 load_dotenv(Path(__file__).with_name(".env"))
 SCHEMA = "traqy"
@@ -53,7 +54,7 @@ def table_depuis(nom, modele):
 # Contenu d'un import : nom de la table, modèle, champ de l'objet Import
 CONTENU = [("oeuvres", Oeuvre, "oeuvres"), ("enregistrements", Enregistrement, "enregistrements"), ("parts", Part, "parts"),
            ("revenus", Revenu, "revenus"), ("soldes", Solde, "soldes"), ("avances", Avance, "avances"),
-           ("revenus_pays", RevenuPays, "revenus_pays"), ("bilans_fichiers", BilanFichier, "fichiers"),
+           ("revenus_pays", RevenuPays, "revenus_pays"), ("detail_pays", DetailPays, "detail_pays"), ("bilans_fichiers", BilanFichier, "fichiers"),
            ("manques", Manque, "manques"), ("fuites", Fuite, "fuites")]
 TABLES = {nom: table_depuis(nom, modele) for nom, modele, _ in CONTENU}
 
