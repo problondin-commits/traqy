@@ -1,7 +1,7 @@
 "use client";
 
-// Carte des recettes par pays, reprise de l'ancienne carte WpointM : traits depuis Paris, points par pays,
-// zones (Monde, Europe, Afrique, Amériques, Asie) et fiche détaillée au toucher d'un pays.
+// Carte des recettes par pays, reprise de l'ancienne carte WpointM : zones (Monde, Europe, Afrique, Amériques, Asie)
+// et fiche détaillée au toucher d'un pays. Traits et points retirés à la demande de Tom (26/10/2026).
 // Tout vient des relevés du client : aucun barème. Seul le mode Projection est une estimation.
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
@@ -58,12 +58,7 @@ const CADRES = Object.fromEntries(ZONES.map((z) => {
 })) as Record<Zone, Cadre>;
 const dansCadre = ([x, y]: [number, number], c: Cadre) => x >= c.x && x <= c.x + c.l && y >= c.y && y <= c.y + c.h;
 
-const TRAITS_MAX = 20; // au-delà, la carte devient illisible
 const r1 = (v: number) => Math.round(v * 10) / 10;
-function trait([x1, y1]: [number, number], [x2, y2]: [number, number]) {
-  const l = Math.hypot(x2 - x1, y2 - y1);
-  return `M${r1(x1)},${r1(y1)} Q${r1((x1 + x2) / 2)},${r1((y1 + y2) / 2 - l * 0.3)} ${r1(x2)},${r1(y2)}`;
-}
 const pc = (v: number) => `${(v * 100).toFixed(1).replace(".", ",")} %`;
 const taux = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
@@ -90,11 +85,6 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
   const intensite = (v: number) => Math.round((0.15 + 0.85 * (mode === "taux" ? v / max : Math.log10(1 + v) / Math.log10(1 + max))) * 1000) / 1000;
 
   const cadre = CADRES[zone];
-  const k = cadre.l / LARGEUR; // échelle du zoom : les points et les traits gardent leur taille à l'écran
-  const destinations = visibles
-    .filter((d) => d.pays !== "FR" && CENTRES.has(d.pays) && dansCadre(CENTRES.get(d.pays)!, cadre))
-    .sort((a, b) => b.valeur - a.valeur).slice(0, TRAITS_MAX);
-  const maxDest = Math.max(1e-9, ...destinations.map((d) => d.valeur));
   const liste = visibles.filter((d) => zone === "monde" || (CENTRES.has(d.pays) && dansCadre(CENTRES.get(d.pays)!, cadre)))
     .sort((a, b) => b.valeur - a.valeur);
   const fiche = choisi ? parCode.get(choisi) : null;
@@ -126,7 +116,7 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
         </div>
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
-        {mode === "recettes" && "Ce que chaque pays a rapporté, lu dans les relevés. Traits depuis Paris vers les pays qui rapportent le plus. Touchez un pays pour sa fiche."}
+        {mode === "recettes" && "Ce que chaque pays a rapporté, lu dans les relevés. Touchez un pays pour sa fiche."}
         {mode === "taux" && "Ce que rapportent réellement 1 000 écoutes en streaming dans chaque pays, part du client, calculé sur ses relevés (pays d'au moins 1 000 écoutes)."}
         {mode === "projection" && `Estimation : les ${euros(avenir!)} à venir répartis selon la part de chaque pays sur les 12 derniers mois relevés. On suppose que cette répartition reste la même.`}
       </p>
@@ -142,34 +132,12 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
                   onMouseEnter={() => setSurvol(code || null)} onMouseLeave={() => setSurvol(null)}
                   onClick={() => actif && setChoisi(code)}
                   className={cn("stroke-background stroke-[0.6] transition-opacity", actif && "cursor-pointer")}
-                  style={{ fill: actif ? "var(--primary)" : "var(--muted)", fillOpacity: actif ? intensite(d.valeur) : 1, opacity: survol && survol !== code ? 0.85 : 1 }}>
+                  style={{ fill: actif ? "var(--primary)" : "var(--muted)", fillOpacity: actif ? intensite(d.valeur) : 1, opacity: survol && survol !== code ? 0.85 : 1,
+                    ...(choisi === code ? { stroke: "var(--foreground)", strokeWidth: 1.6 } : {}) }}>
                   <title>{actif ? `${nomPays(code)} : ${affichage(d.valeur)}${mode === "projection" ? " (estimation)" : ""}` : `${nom} : pas de relevé`}</title>
                 </path>
               );
             })}
-            {mode !== "taux" && destinations.map((d) => {
-              const allume = survol === d.pays || choisi === d.pays;
-              return (
-                <path key={`t-${d.pays}`} d={trait(PARIS, CENTRES.get(d.pays)!)} fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" pointerEvents="none"
-                  style={{ stroke: allume ? "var(--primary)" : "var(--foreground)", strokeOpacity: allume ? 0.95 : 0.35, strokeWidth: r1(0.6 + 2.6 * Math.sqrt(d.valeur / maxDest)) }} />
-              );
-            })}
-            {destinations.map((d) => {
-              const [x, y] = CENTRES.get(d.pays)!;
-              return (
-                <circle key={`p-${d.pays}`} cx={r1(x)} cy={r1(y)} r={r1((2 + 5 * Math.sqrt(d.valeur / maxDest)) * k)}
-                  onMouseEnter={() => setSurvol(d.pays)} onMouseLeave={() => setSurvol(null)} onClick={() => setChoisi(d.pays)}
-                  style={{ fill: choisi === d.pays ? "var(--foreground)" : "var(--primary)", stroke: "var(--background)", strokeWidth: 1.2 * k, cursor: "pointer" }}>
-                  <title>{`${nomPays(d.pays)} : ${affichage(d.valeur)}`}</title>
-                </circle>
-              );
-            })}
-            {dansCadre(PARIS, cadre) && (
-              <g pointerEvents="none">
-                <circle cx={r1(PARIS[0])} cy={r1(PARIS[1])} r={7 * k} style={{ fill: "var(--background)", stroke: "var(--primary)", strokeWidth: 2.5 * k }} />
-                <circle cx={r1(PARIS[0])} cy={r1(PARIS[1])} r={3 * k} style={{ fill: "var(--primary)" }} />
-              </g>
-            )}
           </svg>
           {survol && parCode.get(survol) && (
             <div className="pointer-events-none absolute top-4 left-4 rounded-lg bg-background/85 px-3 py-2 text-sm ring-1 ring-foreground/10">
