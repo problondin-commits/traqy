@@ -115,8 +115,21 @@ def enregistrer_import(nom_client, imp):
                 c.execute(insert(TABLES[nom]), lignes)
     return import_id
 
+# Mémoire des imports déjà relus : un import ne change plus après son enregistrement, sauf les décisions sur les
+# alertes, mises à jour ici aussi. Évite de relire des dizaines de milliers de lignes à chaque affichage.
+_imports_lus = {}
+
 def lire_import(import_id):
     """Relit un import enregistré, dans le modèle interne. None s'il n'existe pas."""
+    """L'import rendu est partagé avec la mémoire : à lire seulement, jamais à modifier."""
+    if import_id not in _imports_lus:
+        imp = _lire_import(import_id)
+        if imp is None:
+            return None
+        _imports_lus[import_id] = imp
+    return _imports_lus[import_id]
+
+def _lire_import(import_id):
     with moteur().connect() as c:
         entete = c.execute(select(imports, clients.c.nom).join(clients).where(imports.c.id == import_id)).mappings().first()
         if entete is None:
@@ -135,7 +148,12 @@ def decider_fuite(fuite_id, decision):
     """Enregistre le choix du client sur une alerte (None pour annuler). Renvoie False si l'alerte n'existe pas."""
     t = TABLES["fuites"]
     with moteur().begin() as c:
-        return c.execute(t.update().where(t.c.id == fuite_id).values(decision=decision)).rowcount == 1
+        ok = c.execute(t.update().where(t.c.id == fuite_id).values(decision=decision)).rowcount == 1
+    for imp in _imports_lus.values():   # la mémoire suit la décision
+        for f in imp.fuites:
+            if f.id == fuite_id:
+                f.decision = decision
+    return ok
 
 def lister_imports(nom_client=None):
     requete = (select(imports.c.id, imports.c.cree_le, imports.c.resume, clients.c.nom.label("client"))
@@ -147,5 +165,6 @@ def lister_imports(nom_client=None):
 
 def supprimer_client(nom_client):
     """Efface un client et tous ses imports (utilisé par les tests)."""
+    _imports_lus.clear()
     with moteur().begin() as c:
         c.execute(clients.delete().where(clients.c.nom == nom_client))

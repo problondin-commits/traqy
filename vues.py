@@ -29,12 +29,22 @@ def _ajouter(detail, r):
     detail[cle] += r.montant
 
 
+PLATEFORMES_MAX = 6   # par œuvre, les autres plateformes sont regroupées (page plus légère, surtout sur téléphone)
+
+
 def _fusion(*details):
     total = defaultdict(float)
     for d in details:
         for cle, montant in d.items():
             total[cle] += montant
-    return [{"annee": a, "plateforme": p, "type": t, "montant": round(m, 2)} for (a, p, t), m in sorted(total.items())
+    par_plateforme = defaultdict(float)
+    for (_a, p, _t), m in total.items():
+        par_plateforme[p] += abs(m)
+    gardees = set(sorted(par_plateforme, key=par_plateforme.get, reverse=True)[:PLATEFORMES_MAX])
+    regroupe = defaultdict(float)
+    for (a, p, t), m in total.items():
+        regroupe[(a, p if p in gardees else "Autres plateformes", t)] += m
+    return [{"annee": a, "plateforme": p, "type": t, "montant": round(m, 2)} for (a, p, t), m in sorted(regroupe.items())
             if round(m, 2) != 0]
 
 

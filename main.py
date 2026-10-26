@@ -510,8 +510,13 @@ def vue_pour_interface(import_id: int):
     imp = base.lire_import(import_id)
     if imp is None:
         raise HTTPException(status_code=404, detail="Import introuvable.")
-    cree_le = next((i["cree_le"] for i in base.lister_imports(imp.client) if i["id"] == import_id), None)
-    return vues.vue(imp, cree_le)
+    # La vue est calculée une fois par import ; seules les alertes (et leurs décisions) sont relues à chaque fois.
+    if import_id not in _vues_calculees:
+        cree_le = next((i["cree_le"] for i in base.lister_imports(imp.client) if i["id"] == import_id), None)
+        _vues_calculees[import_id] = vues.vue(imp, cree_le)
+    return {**_vues_calculees[import_id], "fuites": [f.model_dump(mode="json") for f in imp.fuites]}
+
+_vues_calculees = {}
 
 # ---------- Projection : revenus à venir d'après les relevés du client (projection.py) ----------
 
