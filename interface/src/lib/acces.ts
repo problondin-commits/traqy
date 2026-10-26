@@ -7,7 +7,11 @@ import { cookies } from "next/headers";
 
 export const COOKIE_ACCES = "traqy_acces";
 
-export type Role = { type: "admin" } | { type: "client"; client: string } | { type: "public" };
+// Accès clients en pause (décision de Tom, 26/10/2026) : leur lien n'ouvre plus leurs dossiers, il affiche un message.
+// Pour réactiver un client quand il veut consulter, retirer son nom de cette liste.
+export const CLIENTS_EN_PAUSE = ["S.Pri Noir", "Luidji"];
+
+export type Role = { type: "admin" } | { type: "client"; client: string } | { type: "pause" } | { type: "public" };
 
 function tableDesCodes(): Record<string, string> | null {
   const brut = process.env.TRAQY_ACCES?.trim();
@@ -24,7 +28,8 @@ export function roleDuCode(code: string): Role | null {
   const table = tableDesCodes();
   if (!table || !code || !Object.hasOwn(table, code)) return null;
   const valeur = table[code];
-  return valeur === "admin" ? { type: "admin" } : { type: "client", client: valeur };
+  if (valeur === "admin") return { type: "admin" };
+  return CLIENTS_EN_PAUSE.includes(valeur) ? { type: "pause" } : { type: "client", client: valeur };
 }
 
 export async function roleActuel(): Promise<Role> {

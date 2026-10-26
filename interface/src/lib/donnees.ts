@@ -26,6 +26,9 @@ export const chargerDonnees = cache(async (): Promise<Donnees> => {
   const role = await roleActuel();
   const choixDemo: Choix = { valeur: DEMO, libelle: `${CLIENT_DEMO} (démo)` };
   const demoSeule: Donnees = { vue: vueDemo, demo: true, choix: [choixDemo], actuel: DEMO, erreur: null, role };
+  if (role.type === "pause") {
+    return { vue: null, demo: false, choix: [], actuel: "", erreur: "Votre accès est en pause. Contactez Traqy pour le réactiver.", role };
+  }
   if (!moteurConfigure() || role.type === "public") return demoSeule;
 
   const demande = (await cookies()).get(COOKIE_IMPORT)?.value;

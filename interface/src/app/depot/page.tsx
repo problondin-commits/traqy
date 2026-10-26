@@ -30,7 +30,7 @@ export default async function Depot() {
         action={<Button nativeButton={false} render={<Link href="/manques" />}>Voir le contrôle des manques</Button>}
       />
 
-      {role.type === "client" ? (
+      {role.type === "client" || role.type === "pause" ? (
         <p className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
           Vos fichiers sont déposés par Traqy. Pour ajouter un relevé ou un catalogue, envoyez-le-nous.
         </p>
