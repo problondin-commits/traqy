@@ -8,6 +8,11 @@ Cinq règles, chiffrées uniquement avec les données du client (aucun taux par 
   3. Parts incomplètes       : les parts d'une œuvre font moins de 100 %. Estimation : revenus relevés de l'œuvre × part manquante.
   4. Écoutes sans droits d'auteur : l'enregistrement rapporte, son œuvre ne touche aucun droit d'auteur. Non chiffré.
   5. Œuvres sans aucun revenu : l'œuvre est au catalogue mais n'apparaît dans aucun relevé. Non chiffré.
+  6. Frais et avance à vérifier : un contrat avec avance reste négatif à cause de frais imputés, alors que l'avance est
+                               recoupée sur toute la part du client. Si l'avance a financé ces frais, la dépense compte deux fois.
+                               Non chiffré : seul le contrat le dit.
+  7. Taux de partage inhabituel : sur un contrat, des lignes de recettes ont un autre taux que le taux habituel du contrat.
+                               Estimation : écart de taux × base de ces lignes (lue dans le relevé). À vérifier au contrat.
 """
 from collections import defaultdict
 
@@ -19,7 +24,9 @@ DROITS = {Categorie.droits_auteur}
 MASTER = {Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_physiques}
 SERIES = DROITS | MASTER | {Categorie.droits_voisins}
 REGLES = ["Solde jamais payé", "Revenus qui s'arrêtent", "Parts incomplètes",
-          "Écoutes sans droits d'auteur", "Œuvre sans aucun revenu"]
+          "Écoutes sans droits d'auteur", "Œuvre sans aucun revenu", "Frais et avance à vérifier",
+          "Taux de partage inhabituel"]
+RECETTES = MASTER | {Categorie.droits_voisins, Categorie.autres_revenus}
 
 
 def preuve(r):
@@ -168,8 +175,75 @@ def sans_droits_ni_revenus(imp, revenus):
     return sortie
 
 
+def frais_et_avance(imp):
+    """Règle 6 : contrat avec avance déclarée, compte négatif à cause des frais, avance pourtant recoupée sur les recettes."""
+    sortie = []
+    for a in imp.avances:
+        lignes = [r for r in imp.revenus if r.contrat == a.contrat and r.categorie != Categorie.retenue]
+        recoupements = [r for r in lignes if r.categorie == Categorie.avance]
+        frais = [r for r in lignes if r.categorie == Categorie.frais and (r.montant or 0) < 0]
+        recoupe = -sum(r.montant or 0 for r in recoupements)
+        solde = sum(r.montant or 0 for r in lignes)
+        if recoupe <= 0 or solde >= -1 or not frais:
+            continue
+        debut_recoupement = min((r.debut for r in recoupements if r.debut), default=None)
+        avant = [r for r in frais if debut_recoupement and r.debut and r.debut < debut_recoupement]
+        frais_total = -sum(r.montant or 0 for r in lignes if r.categorie == Categorie.frais)   # net des avoirs éventuels
+        frais_avant = -sum(r.montant or 0 for r in avant)
+        payeur = next((r.payeur for r in lignes if r.payeur), None) or "le distributeur"
+        nom = a.projet or a.contrat
+        sortie.append(Fuite(
+            regle=REGLES[5], oeuvre=nom, payeur=payeur if payeur != "le distributeur" else None, montant=None,
+            methode=(f"Frais imputés au contrat {a.contrat} : {euros(frais_total)}"
+                     + (f", dont {euros(frais_avant)} avant les premières recettes" if frais_avant else "") + ". "
+                     f"Depuis, la part du client sert à recouper l'avance ({euros(recoupe)} recoupés sur {euros(a.montant)}), "
+                     f"sans réduire ces frais : le compte reste à {euros(solde)}. Si l'avance a servi à financer ces frais, "
+                     "la même dépense est comptée deux fois. Non chiffré : seul le contrat permet de trancher."),
+            action=(f"Demander à {payeur} le détail des frais du contrat {a.contrat}, et vérifier dans le contrat s'ils sont "
+                    "financés par l'avance ou à la charge du compte."),
+            preuves=[f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'frais'}, {euros(r.montant or 0)}"
+                     for r in sorted(frais, key=lambda r: r.montant or 0)[:PREUVES_MAX]]))
+    return sortie
+
+def lire_taux(s):
+    try:
+        return float(str(s).replace("%", "").replace(",", ".").strip()) / 100
+    except (TypeError, ValueError):
+        return None
+
+def taux_inhabituels(imp):
+    """Règle 7 : lignes de recettes d'un contrat avec un autre taux que le taux habituel de ce contrat."""
+    sortie, par_contrat = [], defaultdict(list)
+    for r in imp.revenus:
+        t = lire_taux(r.taux_partage)
+        if r.contrat and r.categorie in RECETTES and t and t > 0:
+            par_contrat[r.contrat].append((r, t))
+    for contrat, lignes in par_contrat.items():
+        poids = defaultdict(float)
+        for r, t in lignes:
+            poids[t] += abs(r.montant or 0)
+        habituel = max(poids, key=poids.get)
+        autres = [(r, t) for r, t in lignes if abs(t - habituel) > 1e-6 and (r.montant or 0) > 0]
+        if not autres:
+            continue
+        ecart = sum((r.montant / t) * (habituel - t) for r, t in autres)
+        if abs(ecart) < 1:
+            continue
+        taux = sorted({t for _, t in autres})
+        sortie.append(Fuite(
+            regle=REGLES[6], oeuvre=f"Contrat {contrat}", payeur=next((r.payeur for r, _ in autres if r.payeur), None),
+            montant=round(ecart, 2) if ecart > 0 else None,
+            methode=(f"Taux habituel du contrat : {pour_cent(round(habituel * 100, 2))}. {len(autres)} ligne(s) de recettes à "
+                     f"{', '.join(pour_cent(round(t * 100, 2)) for t in taux)}. Écart estimé : base de ces lignes × différence de taux. "
+                     "C'est peut-être prévu au contrat (par exemple pour le merchandising) : à vérifier."),
+            action="Vérifier dans le contrat si ce taux est prévu pour ces recettes ; sinon, réclamer la différence.",
+            preuves=[f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'recette'}, "
+                     f"taux {r.taux_partage}, {euros(r.montant or 0)}" for r, _ in autres[:PREUVES_MAX]]))
+    return sortie
+
+
 def detecter(imp):
     revenus = [r for r in imp.revenus if r.categorie not in (Categorie.frais, Categorie.avance)]
     tout = (soldes_non_payes(imp) + revenus_interrompus(revenus) + parts_incompletes(imp, revenus)
-            + sans_droits_ni_revenus(imp, revenus))
+            + sans_droits_ni_revenus(imp, revenus) + frais_et_avance(imp) + taux_inhabituels(imp))
     return sorted(tout, key=lambda f: (f.montant is None, -(f.montant or 0), REGLES.index(f.regle)))
