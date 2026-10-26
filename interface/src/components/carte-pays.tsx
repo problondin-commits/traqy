@@ -23,6 +23,26 @@ const chemin = geoPath(projection);
 
 const nomPays = (code: string) => pays.getName(code, "fr") ?? code;
 
+// Points de la carte : centre de chaque pays, corrigé pour les pays aux territoires éloignés (outre-mer, Alaska…).
+// Les traits partent de Paris, comme sur l'ancienne carte WpointM.
+const point = (lon: number, lat: number) => projection([lon, lat]) as [number, number];
+const PARIS = point(2.35, 48.86);
+const CORRECTIONS: Record<string, [number, number]> = { FR: PARIS, US: point(-98, 39), CA: point(-102, 57), RU: point(90, 60), NO: point(9, 61), NL: point(5.3, 52.2) };
+const CENTRES = new Map<string, [number, number]>(
+  formes.flatMap((f) => {
+    const code = pays.numericToAlpha2(String(f.id ?? "").padStart(3, "0"));
+    return code ? [[code, CORRECTIONS[code] ?? (chemin.centroid(f) as [number, number])]] : [];
+  }),
+);
+const TRAITS_MAX = 20; // au-delà, la carte devient illisible
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+function trait([x1, y1]: [number, number], [x2, y2]: [number, number]) {
+  const longueur = Math.hypot(x2 - x1, y2 - y1);
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2 - longueur * 0.3; // courbe bombée vers le haut
+  return `M${r1(x1)},${r1(y1)} Q${r1(cx)},${r1(cy)} ${r1(x2)},${r1(y2)}`;
+}
+
 type Mode = "releve" | "projection";
 
 // avenir : revenus à venir de la projection. En mode « Projection », ils sont répartis entre les pays
@@ -45,6 +65,10 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
   // Échelle logarithmique : la France écrase sinon tous les autres pays
   const intensite = (m: number) => Math.round((0.15 + 0.85 * (Math.log10(1 + m) / Math.log10(1 + max))) * 1000) / 1000;
   const actif = survol ? parCode.get(survol) : null;
+  // Les 20 pays qui rapportent le plus (hors France) : un trait depuis Paris, plus épais quand le pays rapporte plus
+  const destinations = [...parCode.values()].filter((d) => d.pays !== "FR" && CENTRES.has(d.pays))
+    .sort((a, b) => b.montant - a.montant).slice(0, TRAITS_MAX);
+  const maxDest = Math.max(1, ...destinations.map((d) => d.montant));
 
   const enProjection = mode === "projection" && projetable;
   const bascule = projetable && (
@@ -99,6 +123,28 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
               </path>
             );
           })}
+          <g aria-hidden>
+            {destinations.map((d) => {
+              const poids = Math.sqrt(d.montant / maxDest);
+              const actifIci = survol === d.pays;
+              return (
+                <path key={`t-${d.pays}`} d={trait(PARIS, CENTRES.get(d.pays)!)} fill="none" strokeLinecap="round"
+                  style={{ stroke: actifIci ? "var(--primary)" : "var(--foreground)", strokeOpacity: actifIci ? 0.95 : 0.35, strokeWidth: r1(0.6 + 2.6 * poids) }} />
+              );
+            })}
+            {destinations.map((d) => {
+              const [x, y] = CENTRES.get(d.pays)!;
+              return (
+                <circle key={`p-${d.pays}`} cx={r1(x)} cy={r1(y)} r={r1(2 + 5 * Math.sqrt(d.montant / maxDest))}
+                  onMouseEnter={() => setSurvol(d.pays)} onMouseLeave={() => setSurvol(null)}
+                  style={{ fill: "var(--primary)", stroke: "var(--background)", strokeWidth: 1.2, cursor: "default", pointerEvents: "all" }}>
+                  <title>{`${nomPays(d.pays)} : ${euros(d.montant)}${enProjection ? " (estimation)" : ""}`}</title>
+                </circle>
+              );
+            })}
+            <circle cx={r1(PARIS[0])} cy={r1(PARIS[1])} r={7} style={{ fill: "var(--background)", stroke: "var(--primary)", strokeWidth: 2.5 }} />
+            <circle cx={r1(PARIS[0])} cy={r1(PARIS[1])} r={3} style={{ fill: "var(--primary)" }} />
+          </g>
         </svg>
         <div className="pointer-events-none absolute top-4 left-4 rounded-lg bg-background/85 px-3 py-2 text-sm ring-1 ring-foreground/10">
           {actif ? (
@@ -113,7 +159,8 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
             <p className="text-xs text-muted-foreground">Survolez un pays</p>
           )}
         </div>
-        <div className="mt-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-muted-foreground">
+          <span>Traits depuis Paris vers les {Math.min(TRAITS_MAX, destinations.length)} pays qui rapportent le plus ·</span>
           <span className="inline-block size-3 rounded-sm bg-muted" /> {enProjection ? "Pas de recettes récentes" : "Pas de relevé"}
           <span className="ml-3">Moins</span>
           <span className="h-2 w-24 rounded-full" style={{ background: "linear-gradient(to right, color-mix(in oklab, var(--primary) 15%, transparent), var(--primary))" }} />
