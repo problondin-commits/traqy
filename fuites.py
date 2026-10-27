@@ -100,7 +100,8 @@ def revenus_interrompus(revenus):
                 montant=round(moyenne * len(manquees), 2),
                 methode=f"Moyenne des {len(derniers)} derniers paiements ({euros(moyenne)}) × {len(manquees)} périodes sans paiement "
                         f"({', '.join(libelles[p] for p in manquees[:4])}{'…' if len(manquees) > 4 else ''}).",
-                action=f"Demander à {payeur} pourquoi cette œuvre n'est plus payée depuis {libelles[payees[-1]]}.",
+                action=(f"Demander à {payeur}" if payeur != "payeur non indiqué" else "Demander au distributeur")
+                       + f" pourquoi cette œuvre n'est plus payée depuis {libelles[payees[-1]]}.",
                 preuves=[preuve(r) for r in sorted(liste, key=lambda r: r.debut)[-PREUVES_MAX:]]))
     return sortie
 
@@ -190,16 +191,16 @@ def frais_et_avance(imp):
         avant = [r for r in frais if debut_recoupement and r.debut and r.debut < debut_recoupement]
         frais_total = -sum(r.montant or 0 for r in lignes if r.categorie == Categorie.frais)   # net des avoirs éventuels
         frais_avant = -sum(r.montant or 0 for r in avant)
-        payeur = next((r.payeur for r in lignes if r.payeur), None) or "le distributeur"
+        payeur = next((r.payeur for r in lignes if r.payeur), None)
         nom = a.projet or a.contrat
         sortie.append(Fuite(
-            regle=REGLES[5], oeuvre=nom, payeur=payeur if payeur != "le distributeur" else None, montant=None,
+            regle=REGLES[5], oeuvre=nom, payeur=payeur, montant=None,
             methode=(f"Frais imputés au contrat {a.contrat} : {euros(frais_total)}"
                      + (f", dont {euros(frais_avant)} avant les premières recettes" if frais_avant else "") + ". "
                      f"Depuis, la part du client sert à recouper l'avance ({euros(recoupe)} recoupés sur {euros(a.montant)}), "
                      f"sans réduire ces frais : le compte reste à {euros(solde)}. Si l'avance a servi à financer ces frais, "
                      "la même dépense est comptée deux fois. Non chiffré : seul le contrat permet de trancher."),
-            action=(f"Demander à {payeur} le détail des frais du contrat {a.contrat}, et vérifier dans le contrat s'ils sont "
+            action=((f"Demander à {payeur}" if payeur else "Demander au distributeur") + f" le détail des frais du contrat {a.contrat}, et vérifier dans le contrat s'ils sont "
                     "financés par l'avance ou à la charge du compte."),
             preuves=[f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'frais'}, {euros(r.montant or 0)}"
                      for r in sorted(frais, key=lambda r: r.montant or 0)[:PREUVES_MAX]]))
