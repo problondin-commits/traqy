@@ -132,4 +132,34 @@
   html {
     @apply font-sans;
   }
+  /* État « pressé » : boutons et liens se creusent un peu au clic ou à l'appui (150 ms). */
+  :is(button, a, select, [role="button"]) {
+    transition-property: scale, color, background-color, border-color, opacity, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+  :is(button, a, [role="button"]):active:not(:disabled) {
+    scale: 0.97;
+  }
+}
+
+/* Listes qui apparaissent en fondu, élément après élément (250 ms, léger décalage). */
+@keyframes apparition {
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+/* « backwards » : une fois le fondu fini, l'élément reprend son style (ex. alerte écartée à demi effacée). */
+.liste-fondu > * { animation: apparition 250ms ease-out backwards; }
+.liste-fondu > :nth-child(2) { animation-delay: 25ms; }
+.liste-fondu > :nth-child(3) { animation-delay: 50ms; }
+.liste-fondu > :nth-child(4) { animation-delay: 75ms; }
+.liste-fondu > :nth-child(5) { animation-delay: 100ms; }
+.liste-fondu > :nth-child(6) { animation-delay: 125ms; }
+.liste-fondu > :nth-child(n + 7) { animation-delay: 150ms; }
+/* Variante courte (150 ms) : avances et recoupement. */
+.liste-fondu.liste-rapide > * { animation-duration: 150ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .liste-fondu > * { animation: none; }
+  :is(button, a, [role="button"]):active { scale: none; }
 }

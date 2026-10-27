@@ -132,7 +132,9 @@ export function CartePays({ donnees, avenir, horizon }: { donnees: RevenuPays[];
                   onMouseEnter={() => setSurvol(code || null)} onMouseLeave={() => setSurvol(null)}
                   onClick={() => actif && setChoisi(code)}
                   className={cn("stroke-background stroke-[0.6] transition-opacity", actif && "cursor-pointer")}
-                  style={{ fill: actif ? "var(--primary)" : "var(--muted)", fillOpacity: actif ? intensite(d.valeur) : 1, opacity: survol && survol !== code ? 0.85 : 1,
+                  // Pays survolé : blanc en mode sombre, gris très foncé en mode clair (couleur du texte).
+                  style={{ fill: actif && survol === code ? "var(--foreground)" : actif ? "var(--primary)" : "var(--muted)",
+                    fillOpacity: actif && survol !== code ? intensite(d.valeur) : 1, opacity: survol && survol !== code ? 0.85 : 1,
                     ...(choisi === code ? { stroke: "var(--foreground)", strokeWidth: 1.6 } : {}) }}>
                   <title>{actif ? `${nomPays(code)} : ${affichage(d.valeur)}${mode === "projection" ? " (estimation)" : ""}` : `${nom} : pas de relevé`}</title>
                 </path>

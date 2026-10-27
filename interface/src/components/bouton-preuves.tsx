@@ -25,9 +25,9 @@ function telecharger(fuites: Fuite[], client: string) {
   URL.revokeObjectURL(lien.href);
 }
 
-export function BoutonPreuves({ fuites, client }: { fuites: Fuite[]; client: string }) {
+export function BoutonPreuves({ fuites, client, className }: { fuites: Fuite[]; client: string; className?: string }) {
   return (
-    <Button className="mt-5" disabled={!fuites.length} onClick={() => telecharger(fuites, client)}>
+    <Button className={className} disabled={!fuites.length} onClick={() => telecharger(fuites, client)}>
       <Download /> {fuites.length ? "Télécharger" : "Aucune alerte"}
     </Button>
   );

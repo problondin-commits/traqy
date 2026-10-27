@@ -16,11 +16,38 @@ export function EnTete({ titre, description, action }: { titre: string; descript
   );
 }
 
-export function Tuile({ libelle, valeur, detail, accent }: { libelle: string; valeur: string; detail?: string; accent?: boolean }) {
+export type ChiffreBandeau = { libelle: string; valeur: string; detail?: string; accent?: boolean; couleur?: string };
+
+// Un seul cadre pour les chiffres clés d'un écran : le premier en grand, les autres à côté, séparés par un trait fin.
+// Sur téléphone : le premier sur toute la largeur, les autres en dessous. « children » : une ligne en bas du cadre.
+export function Bandeau({ chiffres, children }: { chiffres: ChiffreBandeau[]; children?: ReactNode }) {
   return (
-    <div className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-      <p className="text-xs text-muted-foreground">{libelle}</p>
-      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", accent && "text-primary")}>{valeur}</p>
+    <section className="mb-8 rounded-xl bg-card ring-1 ring-foreground/10">
+      <div className="grid grid-cols-2 sm:flex sm:divide-x sm:divide-border">
+        {chiffres.map((c, i) => (
+          <div key={c.libelle} className={cn("min-w-0 p-4 sm:px-5",
+            i === 0 ? "col-span-2 border-b border-border sm:flex-[1.6] sm:border-b-0" : "sm:flex-1",
+            i > 1 && "border-l border-border")}>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {c.couleur && <span className={cn("inline-block size-2 rounded-full", c.couleur)} />}
+              {c.libelle}
+            </p>
+            <p className={cn("mt-1 font-semibold tabular-nums", i === 0 ? "text-3xl" : "text-xl", c.accent && "text-primary")}>{c.valeur}</p>
+            {c.detail ? <p className="mt-1 text-xs text-muted-foreground">{c.detail}</p> : null}
+          </div>
+        ))}
+      </div>
+      {children ? <div className="border-t border-border px-4 py-3 sm:px-5">{children}</div> : null}
+    </section>
+  );
+}
+
+// « fort » : la case à remarquer en premier (contour vert, chiffre vert plus gros).
+export function Tuile({ libelle, valeur, detail, accent, fort }: { libelle: string; valeur: string; detail?: string; accent?: boolean; fort?: boolean }) {
+  return (
+    <div className={cn("rounded-xl bg-card p-4", fort ? "ring-2 ring-primary" : "ring-1 ring-foreground/10")}>
+      <p className={cn("text-xs", fort ? "font-medium text-foreground" : "text-muted-foreground")}>{libelle}</p>
+      <p className={cn("mt-1 font-semibold tabular-nums", fort ? "text-3xl text-primary" : "text-2xl", accent && "text-primary")}>{valeur}</p>
       {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
     </div>
   );

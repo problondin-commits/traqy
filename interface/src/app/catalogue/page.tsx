@@ -32,7 +32,7 @@ export default async function Catalogue() {
         <Tuile libelle="Œuvres" valeur={nombre(catalogue.length)} />
         <Tuile libelle="Parts d'ayants droit" valeur={nombre(ayants)} />
         <Tuile libelle="Parts complètes" valeur={`${catalogue.filter((o) => complete(o.parts_dep)).length} / ${catalogue.length}`} />
-        <Tuile libelle="Revenus relevés" valeur={euros(revenus)} />
+        <Tuile libelle="Revenus relevés" valeur={euros(revenus)} fort />
       </div>
       <p className="-mt-5 mb-8 text-xs text-muted-foreground">
         Score : part des 5 contrôles réussis (ISWC, ISRC, parts à 100 %, présence dans les relevés de droits d&apos;auteur, aucune alerte chiffrée ouverte).

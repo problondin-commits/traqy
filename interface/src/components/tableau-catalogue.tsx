@@ -106,7 +106,7 @@ export function TableauCatalogue({ lignes, fuites }: { lignes: LigneCatalogue[];
       </div>
 
       {/* Téléphone : une carte par œuvre */}
-      <ul className="space-y-2 md:hidden">
+      <ul className="liste-fondu space-y-2 md:hidden">
         {affichees.length === 0 ? (
           <li className="rounded-xl bg-card px-4 py-8 text-center text-sm text-muted-foreground ring-1 ring-foreground/10">Aucune œuvre ne correspond à cette recherche.</li>
         ) : (
@@ -147,7 +147,7 @@ export function TableauCatalogue({ lignes, fuites }: { lignes: LigneCatalogue[];
               <TableHead className="text-right">Revenus relevés</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="liste-fondu">
             {affichees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">Aucune œuvre ne correspond à cette recherche.</TableCell>

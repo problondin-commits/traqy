@@ -55,7 +55,7 @@ export default async function Depot() {
                     <TableHead>Remarques</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="liste-fondu">
                   {vue.fichiers.map((b, i) => (
                     <TableRow key={`${b.fichier}-${i}`}>
                       <TableCell>

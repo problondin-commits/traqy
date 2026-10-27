@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import { EnTete, Indisponible, PastilleGravite, Tuile, Vide } from "@/components/elements";
+import { Bandeau, EnTete, Indisponible, PastilleGravite, Vide } from "@/components/elements";
 import { chargerDonnees } from "@/lib/donnees";
 import { euros } from "@/lib/format";
 
@@ -13,17 +13,34 @@ export default async function ControleDesManques() {
   );
   if (!vue) return <>{entete}<Indisponible message={erreur} /></>;
   const compter = (g: string) => vue.manques.filter((m) => m.gravite === g).length;
+  // Barre de répartition : part de chaque gravité dans le nombre total de manques.
+  const parts = [
+    { n: compter("bloquant"), couleur: "bg-destructive" },
+    { n: compter("important"), couleur: "bg-warning" },
+    { n: compter("à compléter"), couleur: "bg-muted-foreground/40" },
+  ];
   return (
     <>
       {entete}
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Tuile libelle="Bloquants" valeur={String(compter("bloquant"))} detail="Empêchent l'analyse" />
-        <Tuile libelle="Importants" valeur={String(compter("important"))} detail="Peuvent cacher des droits non perçus" />
-        <Tuile libelle="À compléter" valeur={String(compter("à compléter"))} detail="Informations à ajouter" />
-      </div>
+      <Bandeau chiffres={[
+        { libelle: "Bloquants", valeur: String(parts[0].n), detail: "Empêchent l'analyse", couleur: parts[0].couleur },
+        { libelle: "Importants", valeur: String(parts[1].n), detail: "Peuvent cacher des droits non perçus", couleur: parts[1].couleur },
+        { libelle: "À compléter", valeur: String(parts[2].n), detail: "Informations à ajouter", couleur: parts[2].couleur },
+      ]}>
+        {vue.manques.length > 0 ? (
+          <div className="flex h-2 gap-0.5 overflow-hidden rounded-full" role="img"
+            aria-label={`${parts[0].n} bloquants, ${parts[1].n} importants, ${parts[2].n} à compléter`}>
+            {parts.filter((p) => p.n > 0).map((p) => (
+              <span key={p.couleur} className={p.couleur} style={{ flexGrow: p.n }} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Dossier complet.</p>
+        )}
+      </Bandeau>
 
       {vue.manques.length === 0 && <Vide message="Aucun manque : le dossier est complet." />}
-      <div className="space-y-3">
+      <div className="liste-fondu space-y-3">
         {vue.manques.map((m) => (
           <article key={m.sujet} className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
             <div className="flex flex-wrap items-center gap-2">

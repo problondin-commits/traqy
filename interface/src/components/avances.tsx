@@ -14,7 +14,7 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
       <p className="mb-4 text-sm text-muted-foreground">
         Montant de l&apos;avance déclaré par le client. Le recoupement est lu dans les relevés, semestre par semestre.
       </p>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="liste-fondu liste-rapide grid grid-cols-1 gap-3 lg:grid-cols-2">
         {avances.map((a) => {
           const taux = a.taux ?? 0;
           const recoupee = a.reste <= 0;
@@ -59,12 +59,12 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
               </dl>
 
               {!compact && a.periodes.length > 0 && (
-                <div className="mt-4 flex items-end gap-1" aria-label="Recoupement par semestre">
+                <div className="liste-fondu liste-rapide mt-4 flex items-end gap-1" aria-label="Recoupement par semestre">
                   {a.periodes.map((p) => {
                     const max = Math.max(...a.periodes.map((x) => x.recoupe));
                     return (
                       <div key={p.periode} className="flex flex-1 flex-col items-center gap-1" title={`${p.periode} : ${euros(p.recoupe)}`}>
-                        <div className="w-full rounded-sm bg-primary/60" style={{ height: `${max ? Math.max(4, (p.recoupe / max) * 48) : 4}px` }} />
+                        <div className="w-full rounded-sm bg-primary" style={{ height: `${max ? Math.max(4, (p.recoupe / max) * 48) : 4}px` }} />
                         <span className="text-[10px] text-muted-foreground">{p.periode.replace(" ", " ")}</span>
                       </div>
                     );

@@ -60,7 +60,7 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes, verrouill
   return (
     <>
     {/* Téléphone : en-tête compact (logo, client, thème) ; les écrans sont dans la barre d'onglets en bas */}
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur md:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-foreground/10 bg-background/60 px-4 py-2.5 backdrop-blur-xl backdrop-saturate-150 md:hidden">
       <Link href="/depot" aria-label="Traqy, accueil" className="shrink-0"><Logo className="h-6 w-auto" /></Link>
       <div className="min-w-0 flex-1">{menuClient}</div>
       {enCours ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" /> : <ChoixTheme compact />}
@@ -126,7 +126,7 @@ const ONGLETS = [
 
 function OngletsTelephone({ chemin, alertes }: { chemin: string; alertes: number }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-card/95 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-foreground/10 bg-card/60 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 backdrop-blur-xl backdrop-saturate-150 md:hidden">
       {ONGLETS.map(({ href, libelle, icone: Icone }) => {
         const actif = chemin.startsWith(href) || (href === "/depot" && chemin.startsWith("/manques"));
         return (

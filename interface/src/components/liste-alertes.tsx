@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, ChevronDown, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tuile } from "@/components/elements";
+import { Bandeau } from "@/components/elements";
 import { deciderAlerte } from "@/lib/actions";
 import { euros } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -53,14 +53,14 @@ export function ListeAlertes({ fuites }: { fuites: Fuite[] }) {
   const validees = fuites.filter((f) => decisions[f.id ?? 0] === "validée");
   return (
     <>
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Tuile libelle="Droits non perçus chiffrés" valeur={euros(chiffre)} detail="Montants relevés et estimations" accent />
-        <Tuile libelle="Alertes" valeur={String(fuites.length)} detail={`${fuites.filter((f) => f.montant === null).length} non chiffrées`} />
-        <Tuile libelle="Validées pour réclamation" valeur={euros(validees.reduce((s, f) => s + (f.montant ?? 0), 0))} detail={`${validees.length} alertes`} />
-      </div>
+      <Bandeau chiffres={[
+        { libelle: "Droits non perçus chiffrés", valeur: euros(chiffre), detail: "Montants relevés et estimations", accent: true },
+        { libelle: "Alertes", valeur: String(fuites.length), detail: `${fuites.filter((f) => f.montant === null).length} non chiffrées` },
+        { libelle: "Validées pour réclamation", valeur: euros(validees.reduce((s, f) => s + (f.montant ?? 0), 0)), detail: `${validees.length} alertes` },
+      ]} />
       {erreur && <p className="mb-4 rounded-lg bg-destructive/15 px-4 py-2 text-sm text-destructive">{erreur}</p>}
 
-      <div className="space-y-3">
+      <div className="liste-fondu space-y-3">
         {fuites.map((f) => {
           const id = f.id ?? 0;
           const decision = decisions[id];

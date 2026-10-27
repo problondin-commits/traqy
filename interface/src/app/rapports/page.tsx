@@ -16,7 +16,7 @@ export default async function Rapports() {
       {!vue ? (
         <Indisponible message={erreur} />
       ) : (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="liste-fondu grid gap-3 md:grid-cols-3">
           {rapports.map((r) => (
             <article key={r.titre} className="flex flex-col rounded-xl bg-card p-5 ring-1 ring-foreground/10">
               <div className="flex items-center justify-between">
@@ -26,7 +26,7 @@ export default async function Rapports() {
               <h2 className="mt-4 font-medium">{r.titre}</h2>
               <p className="mt-1 flex-1 text-sm text-muted-foreground">{r.description}</p>
               {r.format === "CSV" ? (
-                <BoutonPreuves fuites={vue.fuites} client={vue.client ?? "client"} />
+                <BoutonPreuves fuites={vue.fuites} client={vue.client ?? "client"} className="mt-5" />
               ) : r.format === "PDF" ? (
                 <>
                   <a href="/api/rapport" download className={buttonVariants({ className: "mt-5" })}>
