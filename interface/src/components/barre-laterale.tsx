@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BellRing, ClipboardCheck, FileText, Library, Loader2, TrendingUp, Upload } from "lucide-react";
+import { BellRing, FileText, Library, Loader2, TrendingUp, Upload } from "lucide-react";
 import { ChoixTheme, Logo } from "@/components/theme";
 import { cn } from "@/lib/utils";
 import { choisirClient } from "@/lib/actions";
@@ -12,17 +12,18 @@ import type { Choix } from "@/lib/donnees";
 // verrouille : accès client ou démo, le menu Client est remplacé par le nom du dossier (pas de changement possible)
 type Props = { choix: Choix[]; actuel: string; demo: boolean; manques: number; alertes: number; verrouille?: boolean };
 
+// Design « Blocs » (choix de Tom, 27/10/2026) : une barre en haut avec le logo, les écrans en onglets arrondis,
+// le client et le thème à droite. Sur téléphone, les écrans passent dans la barre d'onglets en bas.
+const STYLE_BARRE = "sticky top-0 z-30 border-b border-foreground/10 bg-background/60 backdrop-blur-xl backdrop-saturate-150";
+
 /** Barre affichée pendant le chargement de la liste des clients. */
 export function BarreSquelette() {
   return (
-    <aside className="hidden shrink-0 flex-col border-r border-border bg-card/40 md:sticky md:top-0 md:flex md:h-screen md:w-64">
-      <div className="px-5 py-4 md:py-6">
-        <Logo className="h-7 w-auto" />
-      </div>
-      <div className="space-y-2 px-5">
-        {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-8 animate-pulse rounded-lg bg-muted/60" />)}
-      </div>
-    </aside>
+    <header className={cn(STYLE_BARRE, "flex items-center gap-6 px-4 py-2.5 sm:px-8 md:py-3.5")}>
+      <Logo className="h-6 w-auto" />
+      <div className="hidden h-9 w-[34rem] animate-pulse rounded-full bg-muted/60 lg:block" />
+      <div className="ml-auto h-8 w-40 animate-pulse rounded-lg bg-muted/60" />
+    </header>
   );
 }
 
@@ -30,17 +31,16 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes, verrouill
   const chemin = usePathname();
   const [enCours, demarrer] = useTransition();
   const ecrans = [
-    { href: "/depot", libelle: "Dépôt", icone: Upload },
-    { href: "/manques", libelle: "Contrôle des manques", icone: ClipboardCheck, compteur: manques },
-    { href: "/catalogue", libelle: "Catalogue", icone: Library },
-    { href: "/alertes", libelle: "Alertes", icone: BellRing, compteur: alertes },
-    { href: "/projection", libelle: "Projection", icone: TrendingUp },
-    { href: "/rapports", libelle: "Rapports", icone: FileText },
+    { href: "/depot", libelle: "Dépôt" },
+    { href: "/manques", libelle: "Manques", titre: "Contrôle des manques", compteur: manques },
+    { href: "/catalogue", libelle: "Catalogue" },
+    { href: "/alertes", libelle: "Alertes", compteur: alertes },
+    { href: "/projection", libelle: "Projection" },
+    { href: "/rapports", libelle: "Rapports" },
   ];
+  const nomClient = choix.find((c) => c.valeur === actuel)?.libelle ?? "—";
   const menuClient = verrouille ? (
-    <p className="truncate rounded-lg border border-input bg-card px-2 py-1.5 text-sm font-medium md:mt-1">
-      {choix.find((c) => c.valeur === actuel)?.libelle ?? "—"}
-    </p>
+    <p className="truncate rounded-lg border border-input bg-card px-2 py-1.5 text-sm font-medium">{nomClient}</p>
   ) : (
     <select
       value={actuel}
@@ -50,7 +50,7 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes, verrouill
         const valeur = e.target.value;
         demarrer(() => choisirClient(valeur));
       }}
-      className="w-full rounded-lg border border-input bg-card px-2 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:mt-1"
+      className="w-full rounded-lg border border-input bg-card px-2 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {choix.map((c) => (
         <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
@@ -59,57 +59,36 @@ export function BarreLaterale({ choix, actuel, demo, manques, alertes, verrouill
   );
   return (
     <>
-    {/* Téléphone : en-tête compact (logo, client, thème) ; les écrans sont dans la barre d'onglets en bas */}
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-foreground/10 bg-background/60 px-4 py-2.5 backdrop-blur-xl backdrop-saturate-150 md:hidden">
+    {/* Ordinateur : logo, onglets, client et thème sur une ligne (onglets sur une 2e ligne entre 768 et 1024 px).
+        Téléphone : logo, client et thème ; les écrans sont dans la barre d'onglets en bas. */}
+    <header className={cn(STYLE_BARRE, "flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-2.5 sm:px-8 md:py-3.5")}>
       <Link href="/depot" aria-label="Traqy, accueil" className="shrink-0"><Logo className="h-6 w-auto" /></Link>
-      <div className="min-w-0 flex-1">{menuClient}</div>
-      {enCours ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" /> : <ChoixTheme compact />}
+      <nav aria-label="Écrans" className="order-last hidden w-full md:flex lg:order-none lg:w-auto">
+        <div className="flex gap-1 rounded-full bg-card p-1 ring-1 ring-foreground/10">
+          {ecrans.map(({ href, libelle, titre, compteur }) => {
+            const actif = chemin.startsWith(href);
+            return (
+              <Link key={href} href={href} title={titre} aria-current={actif ? "page" : undefined}
+                className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm transition-colors",
+                  actif ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                {libelle}
+                {compteur ? (
+                  <span className={cn("rounded-full px-1.5 text-[11px] leading-4 tabular-nums",
+                    actif ? "bg-primary-foreground/15" : "bg-muted text-foreground")}>{compteur}</span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+      <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 md:flex-none">
+        {demo && <span className="hidden rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground sm:inline" title="Toutes les données affichées sont fictives.">Mode démo</span>}
+        <span className="hidden text-sm text-muted-foreground xl:inline">Client</span>
+        <div className="min-w-0 flex-1 md:w-44 md:flex-none">{menuClient}</div>
+        {enCours ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" /> : <ChoixTheme compact />}
+      </div>
     </header>
     <OngletsTelephone chemin={chemin} alertes={alertes} />
-
-    <aside className="hidden shrink-0 flex-col border-r border-border bg-card/40 md:sticky md:top-0 md:flex md:h-screen md:w-64">
-      <div className="flex items-center justify-between gap-3 px-5 py-6">
-        <Link href="/depot" aria-label="Traqy, accueil">
-          <Logo className="h-7 w-auto" />
-        </Link>
-        {enCours && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-      </div>
-      <label className="block px-5 pb-4">
-        <span className="text-xs text-muted-foreground">Client</span>
-        {menuClient}
-      </label>
-      <nav className="flex flex-col gap-1 px-3">
-        {ecrans.map(({ href, libelle, icone: Icone, compteur }) => {
-          const actif = chemin.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                actif ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Icone className="size-4" />
-              <span className="flex-1 whitespace-nowrap">{libelle}</span>
-              {compteur ? (
-                <span className={cn("rounded-full px-2 text-xs tabular-nums", actif ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
-                  {compteur}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto space-y-3 p-5">
-        {demo && (
-          <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Mode démo.</span> Toutes les données affichées sont fictives.
-          </div>
-        )}
-        <ChoixTheme />
-      </div>
-    </aside>
     </>
   );
 }

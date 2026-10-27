@@ -45,7 +45,7 @@ export function Bandeau({ chiffres, children }: { chiffres: ChiffreBandeau[]; ch
 // « fort » : la case à remarquer en premier (contour vert, chiffre vert plus gros).
 export function Tuile({ libelle, valeur, detail, accent, fort }: { libelle: string; valeur: string; detail?: string; accent?: boolean; fort?: boolean }) {
   return (
-    <div className={cn("rounded-xl bg-card p-4", fort ? "ring-2 ring-primary" : "ring-1 ring-foreground/10")}>
+    <div className={cn("rounded-xl bg-card p-5", fort ? "ring-2 ring-primary" : "ring-1 ring-foreground/10")}>
       <p className={cn("text-xs", fort ? "font-medium text-foreground" : "text-muted-foreground")}>{libelle}</p>
       <p className={cn("mt-1 font-semibold tabular-nums", fort ? "text-3xl text-primary" : "text-2xl", accent && "text-primary")}>{valeur}</p>
       {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}

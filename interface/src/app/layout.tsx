@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#111317" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0d10" },
     { media: "(prefers-color-scheme: light)", color: "#f7f7f5" },
   ],
 };
@@ -38,7 +38,7 @@ export const viewport: Viewport = {
 // Les écrans d'attente (Suspense, loading.tsx) s'affichent pendant le chargement.
 export const instant = false;
 
-// La barre de gauche attend la liste des clients ; le reste de la page s'affiche sans l'attendre.
+// La barre du haut attend la liste des clients ; le reste de la page s'affiche sans l'attendre.
 async function BarreAvecDonnees() {
   const d = await chargerDonnees();
   return (
@@ -56,14 +56,14 @@ async function BarreAvecDonnees() {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col md:flex-row">
+      <body className="flex min-h-full flex-col">
         <Theme>
           <TooltipProvider>
             <Suspense fallback={<BarreSquelette />}>
               <BarreAvecDonnees />
             </Suspense>
-            <main className="min-w-0 flex-1 px-4 pt-6 pb-28 sm:px-8 md:py-8 lg:px-12">
-              <div className="mx-auto max-w-6xl">{children}</div>
+            <main className="min-w-0 flex-1 px-4 pt-6 pb-28 sm:px-8 md:py-10">
+              <div className="mx-auto max-w-7xl">{children}</div>
             </main>
           </TooltipProvider>
         </Theme>

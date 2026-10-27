@@ -43,7 +43,7 @@
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-xl: 1.25rem; /* design « Blocs » : cases plus arrondies */
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
@@ -88,11 +88,11 @@
 
 /* Charte Traqy : fond nuit, texte blanc cassé, vert menthe du logo (#31F2A4) en accent */
 .dark {
-  --background: #111317;
+  --background: #0b0d10;
   --foreground: #f5f5f3;
-  --card: #181b21;
+  --card: #14171c;
   --card-foreground: #f5f5f3;
-  --popover: #181b21;
+  --popover: #14171c;
   --popover-foreground: #f5f5f3;
   --primary: #31f2a4;
   --primary-foreground: #0b0d10;
