@@ -16,6 +16,12 @@ Cinq règles, chiffrées uniquement avec les données du client (aucun taux par 
                                frais / avance et chiffre les frais facturés deux fois (montant lu dans les relevés).
   7. Taux de partage inhabituel : sur un contrat, des lignes de recettes ont un autre taux que le taux habituel du contrat.
                                Estimation : écart de taux × base de ces lignes (lue dans le relevé). À vérifier au contrat.
+Avec une fiche contrat déposée par le client (contrats.py) :
+  8. Avances récupérées au-delà du résultat : le contrat dit que l'avance ne se compense que sur le résultat
+                               (« compensable mais non remboursable »). Montant : avances récupérées − résultat des albums,
+                               lus dans les relevés et la fiche contrat. Lecture du contrat à faire confirmer par un avocat.
+  9. Dépenses sans accord écrit à vérifier : frais au-delà du seuil d'accord écrit du contrat. Non chiffré : il faut
+                               d'abord retrouver les accords.
 """
 from collections import defaultdict
 from datetime import date
@@ -29,7 +35,7 @@ MASTER = {Categorie.streaming, Categorie.ventes_numeriques, Categorie.ventes_phy
 SERIES = DROITS | MASTER | {Categorie.droits_voisins}
 REGLES = ["Solde jamais payé", "Revenus qui s'arrêtent", "Parts incomplètes",
           "Écoutes sans droits d'auteur", "Œuvre sans aucun revenu", "Frais et avance à vérifier",
-          "Taux de partage inhabituel"]
+          "Taux de partage inhabituel", "Avances récupérées au-delà du résultat", "Dépenses sans accord écrit à vérifier"]
 RECETTES = MASTER | {Categorie.droits_voisins, Categorie.autres_revenus}
 
 
@@ -297,8 +303,64 @@ def taux_inhabituels(imp):
     return sortie
 
 
+def avances_au_dela_du_resultat(imp):
+    """Règle 8 : avances récupérées au-delà du résultat, quand le contrat ne les compense que sur le résultat."""
+    import contrats
+    c, lecture = contrats.contrat_actif(imp), contrats.lecture(imp)
+    if not lecture or not lecture["avances_non_remboursables"] or not lecture["ecart"]:
+        return []
+    payeur = next((r.payeur for r in imp.revenus if r.payeur and r.contrat in {a["contrat"] for a in c.albums}), None)
+    res = "; ".join(f"{r['album']} {euros(r['resultat'])}"
+                    + (f" (dont {euros(r['anterieur'])} avant le premier relevé détaillé, source : {r['anterieur_source']})"
+                       if r["anterieur"] is not None else "") for r in lecture["resultats"])
+    preuves = []
+    for a in contrats.avances(imp, c):
+        detail = ", ".join(f"{euros(p['recoupe'])} sur {p['album']}" + (" avant les relevés" if p.get("avant_releves") else "")
+                           for p in a["par_album"])
+        preuves.append(f"{a['nom']} : {euros(a['recoupe'])} récupérés sur {euros(a['montant'])} ({detail})")
+    clause = next((x for x in c.clauses if "11" in str(x.get("article", ""))), None)
+    return [Fuite(
+        regle=REGLES[7], oeuvre=c.nom + (f" du {c.date_signature:%d/%m/%Y}" if c.date_signature else ""), payeur=payeur, montant=lecture["ecart"], estimation=True,
+        methode=(f"Avances récupérées : {euros(lecture['avances_recuperees'])}. Résultat des albums (recettes − frais) : "
+                 f"{euros(lecture['resultat_total'])} ({res}). Écart : {euros(lecture['ecart'])}. "
+                 + (f"{clause['article']} : {clause['texte']} " if clause else "")
+                 + "Si l'avance ne se compense que sur le résultat, la part récupérée au-delà n'avait pas à l'être. "
+                 + (c.avertissement or "Lecture du contrat à faire confirmer par un avocat.")),
+        action=("Faire confirmer la lecture du contrat par un avocat, puis demander " + (f"à {payeur}" if payeur else "au distributeur")
+                + " le détail du compte de chaque album et la restitution de ce qui a été récupéré au-delà du résultat."),
+        preuves=preuves)]
+
+
+def depenses_sans_accord(imp):
+    """Règle 9 : dépenses au-delà du seuil d'accord écrit du contrat. Non chiffré tant que les accords ne sont pas retrouvés."""
+    import contrats
+    c = contrats.contrat_actif(imp)
+    lignes = contrats.depenses_sans_accord(imp, c)
+    if not lignes:
+        return []
+    part = sum(-r.montant for r, _, _ in lignes)
+    total = sum(t for _, t, _ in lignes)
+    par_album = defaultdict(int)
+    for _, _, album in lignes:
+        par_album[album] += 1
+    clause = next((x for x in c.clauses if "8.3" in str(x.get("article", ""))), None)
+    seuil = f"{c.seuil_accord_depenses:,.0f} € HT".replace(",", " ")
+    return [Fuite(
+        regle=REGLES[8], oeuvre=f"Dépenses de plus de {seuil}", montant=None, estimation=True,
+        payeur=next((r.payeur for r, _, _ in lignes if r.payeur), None),
+        methode=(f"{len(lignes)} lignes de frais dépassent {seuil} au total, avant partage "
+                 f"({', '.join(f'{n} sur {a}' for a, n in par_album.items())}), soit {euros(total)} HT, dont {euros(part)} "
+                 "à la charge du client. Total HT = part du client ÷ son taux de partage ; lignes regroupées par libellé et semestre. "
+                 + (f"{clause['article']} : {clause['texte']} " if clause else "")
+                 + "Non chiffré : une dépense sans accord écrit n'avait pas à être imputée, mais il faut d'abord retrouver les accords."),
+        action="Retrouver l'accord écrit donné pour chacune de ces dépenses ; pour celles sans accord, demander leur retrait du compte.",
+        preuves=[f"{album}, {r.periode} : {r.titre or 'frais'}, {euros(t)} HT (part du client {euros(-r.montant)})"
+                 for r, t, album in lignes[:PREUVES_MAX]])]
+
+
 def detecter(imp):
     revenus = [r for r in imp.revenus if r.categorie not in (Categorie.frais, Categorie.avance)]
     tout = (soldes_non_payes(imp) + revenus_interrompus(revenus) + parts_incompletes(imp, revenus)
-            + sans_droits_ni_revenus(imp, revenus) + frais_et_avance(imp) + taux_inhabituels(imp))
+            + sans_droits_ni_revenus(imp, revenus) + frais_et_avance(imp) + taux_inhabituels(imp)
+            + avances_au_dela_du_resultat(imp) + depenses_sans_accord(imp))
     return sorted(tout, key=lambda f: (f.montant is None, -(f.montant or 0), REGLES.index(f.regle)))

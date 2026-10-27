@@ -6,6 +6,7 @@ import math
 import re
 from collections import defaultdict
 
+import contrats
 from controle import cle_iswc, cle_titre
 from modele import Categorie
 
@@ -108,7 +109,10 @@ def lignes_catalogue(imp):
 
 
 def avances(imp):
-    """Avances déclarées et leur recoupement, lu dans les lignes « avance » des relevés (montants négatifs)."""
+    """Avances déclarées et leur recoupement, lu dans les lignes « avance » des relevés (montants négatifs).
+    Avec une fiche contrat, les avances sont suivies avance par avance sur tous les albums du contrat (contrats.py)."""
+    if imp.contrats:
+        return contrats.avances(imp)
     sortie = []
     for a in imp.avances:
         lignes = [r for r in imp.revenus if r.contrat == a.contrat]
@@ -188,5 +192,6 @@ def vue(imp, cree_le=None):
         "fuites": [f.model_dump(mode="json") for f in imp.fuites],
         "catalogue": lignes_catalogue(imp),
         "avances": avances(imp),
+        "contrat": contrats.lecture(imp),
         "pays": pays(imp),
     }

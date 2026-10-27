@@ -128,6 +128,30 @@ class Avance(BaseModel):
     ligne: int
 
 
+class Contrat(BaseModel):
+    """Fiche d'un contrat, déclarée par le client (fichier .json déposé avec ses relevés) :
+    les clauses utiles, les avances (minimums garantis) et la façon de les reconnaître dans les relevés.
+    - albums : [{contrat, titre, rang}] : un compte (numéro de contrat des relevés) par album couvert
+    - clauses : [{article, titre, texte}] : résumé fidèle des clauses, cité tel quel à l'écran
+    - avances : [{nom, album, contrat, montant, motifs, recoupe_avant_releves, source_avant_releves}] :
+      « motifs » = morceaux de libellé des lignes « Advance » qui remboursent cette avance, sur n'importe quel compte
+    - resultats_anterieurs : [{contrat, montant, jusqu_au, source}] : résultat d'un compte avant le premier relevé détaillé
+    - avances_non_remboursables : l'avance ne se compense que sur le résultat (ex. « compensables mais non remboursables »)
+    - seuil_accord_depenses : au-delà de ce montant HT, une dépense exige l'accord écrit du client"""
+    nom: str
+    parties: Optional[str] = None
+    date_signature: Optional[date] = None
+    albums: List[dict] = Field(default_factory=list)
+    clauses: List[dict] = Field(default_factory=list)
+    avances: List[dict] = Field(default_factory=list)
+    resultats_anterieurs: List[dict] = Field(default_factory=list)
+    avances_non_remboursables: bool = False
+    seuil_accord_depenses: Optional[float] = None
+    avertissement: Optional[str] = None
+    sources: List[str] = Field(default_factory=list)
+    fichier: str = ""
+
+
 class BilanFichier(BaseModel):
     """Première vérification à l'import : le fichier est-il lisible et reconnu ?"""
     fichier: str
@@ -182,6 +206,7 @@ class Import(BaseModel):
     avances: List[Avance] = Field(default_factory=list)
     revenus_pays: List[RevenuPays] = Field(default_factory=list)
     detail_pays: List[DetailPays] = Field(default_factory=list)
+    contrats: List[Contrat] = Field(default_factory=list)
     fichiers: List[BilanFichier] = Field(default_factory=list)
     manques: List[Manque] = Field(default_factory=list)
     fuites: List[Fuite] = Field(default_factory=list)

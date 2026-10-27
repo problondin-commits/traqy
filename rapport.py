@@ -305,7 +305,7 @@ def generer(vue, aujourdhui=None):
         lignes = [[a.get("projet") or a["contrat"], euros(a["montant"]), euros(a["recoupe"]),
                    pc(a["taux"]) if a.get("taux") is not None else "-", euros(a["reste"]),
                    "Recoupée" if a["reste"] <= 0 else (f"{a['estimation']['periode']} (estimation)" if a.get("estimation") else "Non estimable"),
-                   euros(a.get("net_verse"))] for a in avances]
+                   euros(a["net_verse"]) if a.get("net_verse") is not None else "-"] for a in avances]
         h.append(tableau(["Projet", "Avance", "Recoupé", "Part", "Reste", "Fin estimée", "Solde du compte"], lignes,
                          [44 * mm, 21 * mm, 21 * mm, 15 * mm, 20 * mm, 30 * mm, largeur - 151 * mm], droite=(1, 2, 3, 4, 6)))
         for a in avances:

@@ -17,7 +17,7 @@ from sqlalchemy import (Boolean, Column, Date, DateTime, Float, ForeignKey, Inte
                         create_engine, insert, select, text)
 from sqlalchemy.dialects.postgresql import JSONB
 
-from modele import (Avance, BilanFichier, DetailPays, Enregistrement, Fuite, Import, Manque, Oeuvre, Part, Revenu, RevenuPays,
+from modele import (Avance, BilanFichier, Contrat, DetailPays, Enregistrement, Fuite, Import, Manque, Oeuvre, Part, Revenu, RevenuPays,
                     Solde)
 
 load_dotenv(Path(__file__).with_name(".env"))
@@ -55,7 +55,7 @@ def table_depuis(nom, modele):
 CONTENU = [("oeuvres", Oeuvre, "oeuvres"), ("enregistrements", Enregistrement, "enregistrements"), ("parts", Part, "parts"),
            ("revenus", Revenu, "revenus"), ("soldes", Solde, "soldes"), ("avances", Avance, "avances"),
            ("revenus_pays", RevenuPays, "revenus_pays"), ("detail_pays", DetailPays, "detail_pays"), ("bilans_fichiers", BilanFichier, "fichiers"),
-           ("manques", Manque, "manques"), ("fuites", Fuite, "fuites")]
+           ("manques", Manque, "manques"), ("fuites", Fuite, "fuites"), ("contrats", Contrat, "contrats")]
 TABLES = {nom: table_depuis(nom, modele) for nom, modele, _ in CONTENU}
 
 
@@ -141,6 +141,35 @@ def _lire_import(import_id):
             garder = lambda k: k != "import_id" and (k != "id" or "id" in modele.model_fields)
             setattr(imp, champ, [modele(**{k: v for k, v in l.items() if garder(k)}) for l in lignes])
     return imp
+
+def ajouter_contrat(import_id, contrat, bilan):
+    """Ajoute une fiche contrat (et sa ligne de bilan) à un import déjà enregistré, puis recalcule ses alertes."""
+    import fuites
+    with moteur().begin() as c:
+        for nom, element in (("contrats", contrat), ("bilans_fichiers", bilan)):
+            ligne = dict(element.model_dump(mode="json", exclude={"id"}), import_id=import_id)
+            ligne = {k: (date.fromisoformat(v) if isinstance(TABLES[nom].c[k].type, Date) and v else v) for k, v in ligne.items()}
+            c.execute(insert(TABLES[nom]).values(**ligne))
+    _imports_lus.pop(import_id, None)
+    imp = lire_import(import_id)
+    return remplacer_fuites(import_id, fuites.detecter(imp))
+
+def remplacer_fuites(import_id, nouvelles):
+    """Remplace les alertes d'un import par celles recalculées, en gardant les décisions du client
+    (même règle, même œuvre ou compte). Renvoie la liste (règle, objet, montant, décision gardée)."""
+    t = TABLES["fuites"]
+    with moteur().begin() as c:
+        anciennes = c.execute(select(t.c.regle, t.c.oeuvre, t.c.decision).where(t.c.import_id == import_id)).all()
+        decisions = {(r.regle, r.oeuvre): r.decision for r in anciennes if r.decision}
+        for f in nouvelles:
+            f.decision = decisions.get((f.regle, f.oeuvre), f.decision)
+        c.execute(t.delete().where(t.c.import_id == import_id))
+        if nouvelles:
+            c.execute(insert(t), [dict(f.model_dump(mode="json", exclude={"id"}), import_id=import_id) for f in nouvelles])
+        resume = c.execute(select(imports.c.resume).where(imports.c.id == import_id)).scalar() or {}
+        c.execute(imports.update().where(imports.c.id == import_id).values(resume={**resume, "fuites": len(nouvelles)}))
+    _imports_lus.pop(import_id, None)
+    return [(f.regle, f.oeuvre, f.montant, f.decision) for f in nouvelles]
 
 DECISIONS = ("validée", "écartée")
 

@@ -68,12 +68,39 @@ export type Avance = {
   recoupe: number;
   reste: number;
   taux: number | null; // part recoupée, de 0 à 1
-  recettes: number; // part du client avant recoupement
-  frais: number;
-  net_verse: number; // somme des relevés du contrat (négatif : frais encore à couvrir)
+  recettes: number | null; // part du client avant recoupement (null : avance suivie sur plusieurs comptes)
+  frais: number | null;
+  net_verse: number | null; // somme des relevés du contrat (négatif : frais encore à couvrir)
   periodes: { periode: string; recoupe: number }[];
   estimation: { periode: string; semestres: number; rythme: number; methode: string } | null;
   source: string;
+  // Avec une fiche contrat : avance suivie sur tous les albums du contrat
+  cle?: string;
+  nom?: string;
+  album?: string | null;
+  par_album?: { album: string; contrat: string; recoupe: number; avant_releves?: boolean }[];
+  avant_releves?: { montant: number; source: string | null } | null;
+};
+
+// Lecture d'un contrat déclaré par le client (contrats.py) : fiche, résultat des albums et écart
+export type ContratLecture = {
+  nom: string;
+  parties: string | null;
+  date_signature: string | null;
+  albums: { contrat: string; titre: string; rang?: string }[];
+  clauses: { article: string; titre: string; texte: string }[];
+  avertissement: string | null;
+  sources: string[];
+  avances_non_remboursables: boolean;
+  seuil_accord_depenses: number | null;
+  resultats: {
+    album: string; contrat: string; recettes: number; frais: number; resultat: number;
+    anterieur: number | null; anterieur_jusqu_au: string | null; anterieur_source: string | null;
+  }[];
+  resultat_total: number;
+  avances_recuperees: number;
+  avances_declarees: number;
+  ecart: number | null;
 };
 
 // Recettes par pays (code à deux lettres), lues dans les relevés
@@ -100,6 +127,7 @@ export type Vue = {
   fuites: Fuite[];
   catalogue: LigneCatalogue[];
   avances?: Avance[];
+  contrat?: ContratLecture | null;
   pays?: RevenuPays[];
 };
 

@@ -1,4 +1,5 @@
 import { Avances } from "@/components/avances";
+import { BlocContrat } from "@/components/bloc-contrat";
 import { BlocsCatalogue } from "@/components/blocs-catalogue";
 import { EnTete, Indisponible, Vide } from "@/components/elements";
 import { TableauCatalogue } from "@/components/tableau-catalogue";
@@ -24,6 +25,8 @@ export default async function Catalogue() {
         Score : part des 5 contrôles réussis (ISWC, ISRC, parts à 100 %, présence dans les relevés de droits d&apos;auteur, aucune alerte chiffrée ouverte).
         100 % veut dire que tous les contrôles sont réussis, pas qu&apos;aucun argent ne manque.
       </p>
+
+      <BlocContrat contrat={vue.contrat} />
 
       <Avances avances={vue.avances ?? []} />
 

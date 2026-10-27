@@ -1,5 +1,6 @@
-// Avances et état de leur recoupement, par contrat. Le montant de l'avance est déclaré par le client ;
+// Avances et état de leur recoupement. Le montant de l'avance est déclaré par le client ;
 // le recoupement est lu dans les relevés (lignes « avance »). La date de fin est une estimation.
+// Avec une fiche contrat, chaque avance est suivie sur tous les albums du contrat : on voit qui a remboursé quoi.
 import { euros } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Avance } from "@/lib/types";
@@ -8,22 +9,25 @@ const pc = (v: number) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDig
 
 export function Avances({ avances, compact = false }: { avances: Avance[]; compact?: boolean }) {
   if (avances.length === 0) return null;
+  const parContrat = avances.some((a) => a.par_album);
   return (
     <section className="mb-8">
       <h2 className="mb-1 font-medium">Avances et recoupement</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Montant de l&apos;avance déclaré par le client. Le recoupement est lu dans les relevés, semestre par semestre.
+        {parContrat
+          ? "Montant de chaque avance lu dans la fiche contrat. Le recoupement est lu dans les relevés, sur tous les albums du contrat : une avance peut être remboursée par les recettes d'un autre album."
+          : "Montant de l'avance déclaré par le client. Le recoupement est lu dans les relevés, semestre par semestre."}
       </p>
       <div className="liste-fondu liste-rapide grid grid-cols-1 gap-3 lg:grid-cols-2">
         {avances.map((a) => {
           const taux = a.taux ?? 0;
           const recoupee = a.reste <= 0;
           return (
-            <article key={a.contrat} className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
+            <article key={a.cle ?? a.contrat} className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium break-words">{a.projet ?? a.contrat}</p>
-                  <p className="text-xs text-muted-foreground">Contrat {a.contrat}</p>
+                  <p className="font-medium break-words">{a.nom ?? a.projet ?? a.contrat}</p>
+                  <p className="text-xs text-muted-foreground">{a.album ? `Avance versée pour ${a.album}` : `Contrat ${a.contrat}`}</p>
                 </div>
                 <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                   recoupee ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning")}>
@@ -46,7 +50,7 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
                 <dd className="text-right">
                   {recoupee ? "—" : a.estimation ? <>{a.estimation.periode} <span className="text-xs text-muted-foreground">(estimation)</span></> : "Non estimable"}
                 </dd>
-                {!compact && (
+                {!compact && a.recettes !== null && a.frais !== null && a.net_verse !== null && (
                   <>
                     <dt className="text-muted-foreground">Recettes du label (avant recoupement)</dt>
                     <dd className="text-right tabular-nums">{euros(a.recettes)}</dd>
@@ -58,6 +62,25 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
                 )}
               </dl>
 
+              {!compact && a.par_album && a.par_album.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-muted-foreground">Qui a remboursé cette avance</p>
+                  <ul className="mt-1.5 space-y-1 text-sm">
+                    {a.par_album.map((p) => (
+                      <li key={`${p.contrat}-${p.avant_releves ? "avant" : "releves"}`} className="flex justify-between gap-3">
+                        <span className="min-w-0">
+                          Recettes de {p.album}
+                          {p.avant_releves && <span className="text-muted-foreground"> · avant les relevés détaillés</span>}
+                          {a.album && p.album !== a.album && <span className="ml-1.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[11px] text-warning">autre album</span>}
+                        </span>
+                        <span className="shrink-0 tabular-nums">{euros(p.recoupe)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {a.avant_releves?.source && <p className="mt-1.5 text-xs text-muted-foreground">Avant les relevés : {a.avant_releves.source}.</p>}
+                </div>
+              )}
+
               {!compact && a.periodes.length > 0 && (
                 <div className="liste-fondu liste-rapide mt-4 flex items-end gap-1" aria-label="Recoupement par semestre">
                   {a.periodes.map((p) => {
@@ -65,7 +88,7 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
                     return (
                       <div key={p.periode} className="flex flex-1 flex-col items-center gap-1" title={`${p.periode} : ${euros(p.recoupe)}`}>
                         <div className="w-full rounded-sm bg-primary" style={{ height: `${max ? Math.max(4, (p.recoupe / max) * 48) : 4}px` }} />
-                        <span className="text-[10px] text-muted-foreground">{p.periode.replace(" ", " ")}</span>
+                        <span className="text-[10px] text-muted-foreground">{p.periode.replace(" ", " ")}</span>
                       </div>
                     );
                   })}
@@ -73,7 +96,7 @@ export function Avances({ avances, compact = false }: { avances: Avance[]; compa
               )}
 
               {a.estimation && !recoupee && <p className="mt-3 text-xs text-muted-foreground">{a.estimation.methode}</p>}
-              {!compact && a.net_verse < 0 && (
+              {!compact && a.net_verse !== null && a.net_verse < 0 && (
                 <p className="mt-2 text-xs text-muted-foreground">Solde négatif : les frais imputés au contrat dépassent encore les recettes restantes après recoupement.</p>
               )}
             </article>

@@ -136,7 +136,7 @@ function BlocAvances({ avances }: { avances: NonNullable<Vue["avances"]> }) {
   const total = avances.reduce((s, a) => s + a.montant, 0);
   const recoupe = avances.reduce((s, a) => s + Math.min(a.recoupe, a.montant), 0);
   const taux = total ? recoupe / total : 0;
-  const titre = avances.length === 1 ? `Avance · ${avances[0].projet ?? avances[0].contrat}` : `Avances · ${avances.length} contrats`;
+  const titre = avances.length === 1 ? `Avance · ${avances[0].projet ?? avances[0].contrat}` : `Avances · ${avances.length} avances`;
   const fins = avances.filter((a) => a.reste > 0 && a.estimation).map((a) => a.estimation!.periode).sort();
   return (
     <article className={cn(BLOC, "col-span-2")}>

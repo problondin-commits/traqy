@@ -18,6 +18,7 @@ Formats reconnus aujourd'hui :
 import calendar
 import hashlib
 import io
+import json
 import math
 import re
 import unicodedata
@@ -29,7 +30,7 @@ import pandas as pd
 
 import controle
 import fuites
-from modele import (Avance, BilanFichier, Categorie, DetailPays, Enregistrement, Import, Oeuvre, Part, Revenu, RevenuPays,
+from modele import (Avance, BilanFichier, Categorie, Contrat, DetailPays, Enregistrement, Import, Oeuvre, Part, Revenu, RevenuPays,
                     Solde)
 
 MOIS_NOMS = {m: i for i, m in enumerate(["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -393,6 +394,17 @@ def traduire_soldes(d, nom, res, bilan):
                                 devise=texte(ligne.get("devise")), fichier=nom, ligne=i + 2))
         bilan.lignes_importees += 1
 
+def lire_contrat(nom, brut, res):
+    """Fiche contrat Traqy (.json) : clauses, avances et façon de les reconnaître dans les relevés (voir modele.Contrat)."""
+    try:
+        contrat = Contrat(**{**json.loads(brut.decode("utf-8-sig")), "fichier": nom})
+    except (ValueError, TypeError) as e:
+        res.fichiers.append(BilanFichier(fichier=nom, statut="refusé", messages=[f"Fiche contrat illisible : {str(e)[:200]}"]))
+        return
+    res.contrats.append(contrat)
+    res.fichiers.append(BilanFichier(fichier=nom, format="Fiche contrat Traqy", statut="importé",
+                                     lignes_importees=len(contrat.clauses) + len(contrat.avances)))
+
 def traduire_avances(d, nom, res, bilan):
     """Avances déclarées par le client : une ligne par contrat (contrat ; projet ; montant_avance ; date ; devise ;
     versee_au_client, facultatif : « oui » si l'avance a été versée en argent au client)."""
@@ -464,6 +476,9 @@ def importer(fichiers):
             res.fichiers.append(BilanFichier(fichier=nom, statut="ignoré", messages=[f"Doublon exact de {vus[h]}."]))
             continue
         vus[h] = nom
+        if nom.lower().endswith(".json"):
+            lire_contrat(nom, brut, res)
+            continue
         for nom_tab, d in tableaux(nom, brut, res.fichiers):
             origine = [str(c) for c in d.columns]
             d.columns = nommer_colonnes(d.columns)
