@@ -9,7 +9,7 @@ export const COOKIE_ACCES = "traqy_acces";
 
 // Accès clients en pause (décision de Tom, 26/10/2026) : leur lien n'ouvre plus leurs dossiers, il affiche un message.
 // Pour réactiver un client quand il veut consulter, retirer son nom de cette liste.
-export const CLIENTS_EN_PAUSE = ["S.Pri Noir", "Luidji"];
+export const CLIENTS_EN_PAUSE: string[] = [];
 
 export type Role = { type: "admin" } | { type: "client"; client: string } | { type: "pause" } | { type: "public" };
 
