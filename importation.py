@@ -394,7 +394,8 @@ def traduire_soldes(d, nom, res, bilan):
         bilan.lignes_importees += 1
 
 def traduire_avances(d, nom, res, bilan):
-    """Avances déclarées par le client : une ligne par contrat (contrat ; projet ; montant_avance ; date ; devise)."""
+    """Avances déclarées par le client : une ligne par contrat (contrat ; projet ; montant_avance ; date ; devise ;
+    versee_au_client, facultatif : « oui » si l'avance a été versée en argent au client)."""
     for i, ligne in d.iterrows():
         contrat = texte(ligne.get("contrat"))
         try:
@@ -406,8 +407,10 @@ def traduire_avances(d, nom, res, bilan):
             noter(bilan, f"Ligne {i + 2} ignorée : contrat ou montant absent.")
             continue
         debut, _ = lire_periode(texte(ligne.get("date")))
+        versee = (texte(ligne.get("versee_au_client")) or "").strip().lower()
         res.avances.append(Avance(contrat=contrat, projet=texte(ligne.get("projet")), montant=montant,
-                                  devise=texte(ligne.get("devise")) or "EUR", date_versement=debut, fichier=nom, ligne=i + 2))
+                                  devise=texte(ligne.get("devise")) or "EUR", date_versement=debut,
+                                  versee_au_client={"oui": True, "non": False}.get(versee), fichier=nom, ligne=i + 2))
         bilan.lignes_importees += 1
 
 def traduire_oeuvres(d, nom, res, bilan):

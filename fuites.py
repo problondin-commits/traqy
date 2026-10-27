@@ -11,7 +11,9 @@ Cinq règles, chiffrées uniquement avec les données du client (aucun taux par 
   6. Frais et avance à vérifier : un contrat avec avance reste négatif à cause de frais imputés, alors que l'avance est
                                recoupée sur toute la part du client. Si l'avance a financé ces frais, la dépense compte deux fois.
                                Non chiffré : seul le contrat le dit. Signale aussi les frais facturés deux fois
-                               (même libellé, même montant, dans deux relevés différents).
+                               (même libellé, même montant, dans deux relevés différents). Si le client déclare l'avance
+                               « versée au client », pas de double comptage possible : l'alerte porte alors sur l'ordre
+                               frais / avance et chiffre les frais facturés deux fois (montant lu dans les relevés).
   7. Taux de partage inhabituel : sur un contrat, des lignes de recettes ont un autre taux que le taux habituel du contrat.
                                Estimation : écart de taux × base de ces lignes (lue dans le relevé). À vérifier au contrat.
 """
@@ -202,23 +204,42 @@ def frais_et_avance(imp):
         en_trop = -sum(r.montant or 0 for _, r in doublons)
         payeur = next((r.payeur for r in lignes if r.payeur), None)
         nom = a.projet or a.contrat
+        # Solde du compte juste avant le recoupement : s'il n'a plus bougé depuis, toutes les recettes partent dans l'avance
+        solde_debut = sum(r.montant or 0 for r in lignes if avant_recoupement(r))
+        fige = debut_recoupement and abs(solde - solde_debut) < 1
+        libelle_debut = next((r.periode for r in recoupements if r.debut == debut_recoupement and r.periode), None)
+        compte = (f"Frais imputés au contrat {a.contrat} : {euros(frais_total)}"
+                  + (f" (après {euros(credits)} de subventions et remboursements)" if credits else "")
+                  + (f", dont {euros(frais_avant)} avant le début du recoupement de l'avance" if frais_avant else "")
+                  + (f" ; premières recettes en {libelle_premieres}" if libelle_premieres else "") + ". "
+                  f"Compte du client : {euros(recettes)} de recettes − {euros(frais_total)} de frais − {euros(recoupe)} "
+                  f"d'avance recoupée ({euros(recoupe)} sur {euros(a.montant)}) = {euros(solde)}. ")
+        doubles = (f"{len(doublons)} ligne{'s' if len(doublons) > 1 else ''} de frais facturée{'s' if len(doublons) > 1 else ''} "
+                   f"deux fois (même libellé, même montant, deux relevés) : {euros(en_trop)} en trop." if doublons else "")
+        demander = f"Demander à {payeur}" if payeur else "Demander au distributeur"
+        if a.versee_au_client:
+            # L'avance a été versée au client : elle n'a pas payé ces frais, pas de double comptage entre frais et avance.
+            methode = (compte + f"L'avance de {euros(a.montant)} a été versée au client : elle n'a pas financé ces frais, "
+                       "il n'y a donc pas de double comptage entre frais et avance. "
+                       + (f"En revanche, le solde n'a plus bougé depuis le début du recoupement ({libelle_debut}) : chaque "
+                          "relevé, tout ce qui reste des recettes une fois les frais payés part dans l'avance, et le déficit "
+                          "de frais ne baisse jamais. À vérifier : l'ordre que le contrat prévoit pour couvrir les frais et l'avance. "
+                          if fige else "À vérifier : l'ordre que le contrat prévoit pour couvrir les frais et l'avance. ")
+                       + doubles)
+            action = (demander + (f" le remboursement des {euros(en_trop)} de frais facturés deux fois, et" if doublons else "")
+                      + f" dans quel ordre le contrat {a.contrat} prévoit de couvrir les frais et l'avance.")
+            montant, estimation = (round(en_trop, 2), False) if doublons else (None, False)
+        else:
+            methode = (compte + "Si l'avance a servi à financer ces frais, la même dépense est payée deux fois : une fois en "
+                       "frais, une fois en remboursement d'avance. Si l'avance était sans lien avec ces frais, le calcul est "
+                       "normal. Non chiffré : seul le contrat permet de trancher." + (f" À part : {doubles}" if doublons else ""))
+            action = (demander + f" si l'avance du contrat {a.contrat} a été versée au client ou a financé ces frais, et le détail des frais"
+                      + (f" ; réclamer le remboursement des {euros(en_trop)} facturés deux fois" if doublons else "") + ".")
+            montant, estimation = None, False
         sortie.append(Fuite(
-            regle=REGLES[5], oeuvre=nom, payeur=payeur, montant=None,
-            methode=(f"Frais imputés au contrat {a.contrat} : {euros(frais_total)}"
-                     + (f" (après {euros(credits)} de subventions et remboursements)" if credits else "")
-                     + (f", dont {euros(frais_avant)} avant le début du recoupement de l'avance" if frais_avant else "")
-                     + (f" ; premières recettes en {libelle_premieres}" if libelle_premieres else "") + ". "
-                     f"Compte du client : {euros(recettes)} de recettes − {euros(frais_total)} de frais − {euros(recoupe)} "
-                     f"d'avance recoupée ({euros(recoupe)} sur {euros(a.montant)}) = {euros(solde)}. "
-                     "Si l'avance a servi à financer ces frais, la même dépense est payée deux fois : une fois en frais, "
-                     "une fois en remboursement d'avance. Si l'avance était sans lien avec ces frais, le calcul est normal. "
-                     "Non chiffré : seul le contrat permet de trancher."
-                     + (f" À part : {len(doublons)} ligne{'s' if len(doublons) > 1 else ''} de frais facturée"
-                        f"{'s' if len(doublons) > 1 else ''} deux fois (même libellé, même montant, deux relevés), "
-                        f"{euros(en_trop)} en trop." if doublons else "")),
-            action=((f"Demander à {payeur}" if payeur else "Demander au distributeur")
-                    + f" si l'avance du contrat {a.contrat} a été versée au client ou a financé ces frais, et le détail des frais"
-                    + (f" ; réclamer le remboursement des {euros(en_trop)} facturés deux fois" if doublons else "") + "."),
+            regle=REGLES[5], oeuvre=nom, payeur=payeur, montant=montant, estimation=estimation,
+            methode=methode,
+            action=action,
             preuves=[f"Facturé deux fois : {r.titre or 'frais'}, {euros(-(r.montant or 0))} (relevé {premier.periode}, "
                      f"ligne {premier.ligne}, puis relevé {r.periode}, ligne {r.ligne})" for premier, r in doublons]
                     + [f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'frais'}, {euros(r.montant or 0)}"

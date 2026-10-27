@@ -123,6 +123,7 @@ class Avance(BaseModel):
     montant: float
     devise: Optional[str] = "EUR"
     date_versement: Optional[date] = None
+    versee_au_client: Optional[bool] = None   # True : l'avance a été versée en argent au client (elle n'a pas payé de frais)
     fichier: str
     ligne: int
 
