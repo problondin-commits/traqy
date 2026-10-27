@@ -10,11 +10,13 @@ Cinq règles, chiffrées uniquement avec les données du client (aucun taux par 
   5. Œuvres sans aucun revenu : l'œuvre est au catalogue mais n'apparaît dans aucun relevé. Non chiffré.
   6. Frais et avance à vérifier : un contrat avec avance reste négatif à cause de frais imputés, alors que l'avance est
                                recoupée sur toute la part du client. Si l'avance a financé ces frais, la dépense compte deux fois.
-                               Non chiffré : seul le contrat le dit.
+                               Non chiffré : seul le contrat le dit. Signale aussi les frais facturés deux fois
+                               (même libellé, même montant, dans deux relevés différents).
   7. Taux de partage inhabituel : sur un contrat, des lignes de recettes ont un autre taux que le taux habituel du contrat.
                                Estimation : écart de taux × base de ces lignes (lue dans le relevé). À vérifier au contrat.
 """
 from collections import defaultdict
+from datetime import date
 
 from controle import cle_iswc, cle_titre, euros, pour_cent
 from modele import Categorie, Fuite
@@ -188,23 +190,54 @@ def frais_et_avance(imp):
         if recoupe <= 0 or solde >= -1 or not frais:
             continue
         debut_recoupement = min((r.debut for r in recoupements if r.debut), default=None)
-        avant = [r for r in frais if debut_recoupement and r.debut and r.debut < debut_recoupement]
-        frais_total = -sum(r.montant or 0 for r in lignes if r.categorie == Categorie.frais)   # net des avoirs éventuels
-        frais_avant = -sum(r.montant or 0 for r in avant)
+        tous_frais = [r for r in lignes if r.categorie == Categorie.frais]
+        avant_recoupement = lambda r: debut_recoupement and r.debut and r.debut < debut_recoupement
+        frais_total = -sum(r.montant or 0 for r in tous_frais)   # net des subventions et avoirs
+        credits = sum(r.montant or 0 for r in tous_frais if (r.montant or 0) > 0)
+        frais_avant = -sum(r.montant or 0 for r in tous_frais if avant_recoupement(r))
+        recettes = sum(r.montant or 0 for r in lignes if r.categorie in RECETTES)
+        premieres = min((r.debut for r in lignes if r.categorie in RECETTES and (r.montant or 0) > 0 and r.debut), default=None)
+        libelle_premieres = next((r.periode for r in lignes if r.debut == premieres and r.periode), None)
+        doublons = frais_en_double(frais)
+        en_trop = -sum(r.montant or 0 for _, r in doublons)
         payeur = next((r.payeur for r in lignes if r.payeur), None)
         nom = a.projet or a.contrat
         sortie.append(Fuite(
             regle=REGLES[5], oeuvre=nom, payeur=payeur, montant=None,
             methode=(f"Frais imputés au contrat {a.contrat} : {euros(frais_total)}"
-                     + (f", dont {euros(frais_avant)} avant les premières recettes" if frais_avant else "") + ". "
-                     f"Depuis, la part du client sert à recouper l'avance ({euros(recoupe)} recoupés sur {euros(a.montant)}), "
-                     f"sans réduire ces frais : le compte reste à {euros(solde)}. Si l'avance a servi à financer ces frais, "
-                     "la même dépense est comptée deux fois. Non chiffré : seul le contrat permet de trancher."),
-            action=((f"Demander à {payeur}" if payeur else "Demander au distributeur") + f" le détail des frais du contrat {a.contrat}, et vérifier dans le contrat s'ils sont "
-                    "financés par l'avance ou à la charge du compte."),
-            preuves=[f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'frais'}, {euros(r.montant or 0)}"
-                     for r in sorted(frais, key=lambda r: r.montant or 0)[:PREUVES_MAX]]))
+                     + (f" (après {euros(credits)} de subventions et remboursements)" if credits else "")
+                     + (f", dont {euros(frais_avant)} avant le début du recoupement de l'avance" if frais_avant else "")
+                     + (f" ; premières recettes en {libelle_premieres}" if libelle_premieres else "") + ". "
+                     f"Compte du client : {euros(recettes)} de recettes − {euros(frais_total)} de frais − {euros(recoupe)} "
+                     f"d'avance recoupée ({euros(recoupe)} sur {euros(a.montant)}) = {euros(solde)}. "
+                     "Si l'avance a servi à financer ces frais, la même dépense est payée deux fois : une fois en frais, "
+                     "une fois en remboursement d'avance. Si l'avance était sans lien avec ces frais, le calcul est normal. "
+                     "Non chiffré : seul le contrat permet de trancher."
+                     + (f" À part : {len(doublons)} ligne{'s' if len(doublons) > 1 else ''} de frais facturée"
+                        f"{'s' if len(doublons) > 1 else ''} deux fois (même libellé, même montant, deux relevés), "
+                        f"{euros(en_trop)} en trop." if doublons else "")),
+            action=((f"Demander à {payeur}" if payeur else "Demander au distributeur")
+                    + f" si l'avance du contrat {a.contrat} a été versée au client ou a financé ces frais, et le détail des frais"
+                    + (f" ; réclamer le remboursement des {euros(en_trop)} facturés deux fois" if doublons else "") + "."),
+            preuves=[f"Facturé deux fois : {r.titre or 'frais'}, {euros(-(r.montant or 0))} (relevé {premier.periode}, "
+                     f"ligne {premier.ligne}, puis relevé {r.periode}, ligne {r.ligne})" for premier, r in doublons]
+                    + [f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'frais'}, {euros(r.montant or 0)}"
+                       for r in sorted(frais, key=lambda r: r.montant or 0)[:PREUVES_MAX]]))
     return sortie
+
+
+def frais_en_double(frais):
+    """Frais facturés deux fois : même libellé et même montant, dans deux relevés (semestres) différents.
+    Renvoie des paires (première ligne, ligne en double). Un libellé daté (ex. « TRA BARRY PARIS 261123 ») désigne
+    une dépense précise : la retrouver à l'identique dans un autre relevé indique une refacturation."""
+    vus, doublons = {}, []
+    for r in sorted(frais, key=lambda r: (r.debut or r.fin or date.min, r.ligne or 0)):
+        cle = (cle_titre(r.titre), round(r.montant or 0, 2))
+        if not r.titre or cle not in vus:
+            vus.setdefault(cle, r)
+        elif vus[cle].periode != r.periode:
+            doublons.append((vus[cle], r))
+    return doublons
 
 def lire_taux(s):
     try:
