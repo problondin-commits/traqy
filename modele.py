@@ -137,7 +137,10 @@ class Contrat(BaseModel):
       « motifs » = morceaux de libellé des lignes « Advance » qui remboursent cette avance, sur n'importe quel compte
     - resultats_anterieurs : [{contrat, montant, jusqu_au, source}] : résultat d'un compte avant le premier relevé détaillé
     - avances_non_remboursables : l'avance ne se compense que sur le résultat (ex. « compensables mais non remboursables »)
-    - seuil_accord_depenses : au-delà de ce montant HT, une dépense exige l'accord écrit du client"""
+    - seuil_accord_depenses : au-delà de ce montant HT, une dépense exige l'accord écrit du client
+    - partage_client : part du client dans les recettes (ex. 0.5 pour un partage 50/50)
+    - commission_gestion : commission de gestion prise sur cette part quand elle n'est pas déduite avant le partage
+      (ex. 0.05 : une ligne à 47,5 % = 50 % moins 5 % de gestion, prévue au contrat)"""
     nom: str
     parties: Optional[str] = None
     date_signature: Optional[date] = None
@@ -147,6 +150,8 @@ class Contrat(BaseModel):
     resultats_anterieurs: List[dict] = Field(default_factory=list)
     avances_non_remboursables: bool = False
     seuil_accord_depenses: Optional[float] = None
+    partage_client: Optional[float] = None
+    commission_gestion: Optional[float] = None
     avertissement: Optional[str] = None
     sources: List[str] = Field(default_factory=list)
     fichier: str = ""

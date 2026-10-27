@@ -112,6 +112,40 @@ def resultats(imp, c=None):
     return sortie
 
 
+def _pc(x):
+    return f"{x * 100:g} %".replace(".", ",")
+
+
+def taux_prevus(c):
+    """Taux de partage prévus au contrat pour la part du client : {taux arrondi : explication}. Vide sans partage déclaré."""
+    if c is None or not c.partage_client:
+        return {}
+    p, g = c.partage_client, c.commission_gestion
+    prevus = {round(p, 4): f"partage à {_pc(p)} prévu au contrat"}
+    if g:
+        prevus[round(p * (1 - g), 4)] = f"{_pc(p)} moins la commission de gestion de {_pc(g)} prévue au contrat"
+    return prevus
+
+
+def controle_taux(imp, c=None):
+    """Taux de partage des recettes des comptes du contrat, comparés aux taux prévus au contrat.
+    Renvoie un résumé par taux (montant de la part du client, conforme ou non) ; None sans taux déclaré."""
+    from fuites import RECETTES, lire_taux
+    c = c or contrat_actif(imp)
+    prevus = taux_prevus(c)
+    if not prevus:
+        return None
+    comptes = _comptes(c)
+    par_taux = defaultdict(float)
+    for r in imp.revenus:
+        t = lire_taux(r.taux_partage)
+        if r.contrat in comptes and r.categorie in RECETTES and t and t > 0:
+            par_taux[round(t, 4)] += r.montant or 0
+    taux = [{"taux": t, "montant": round(m, 2), "conforme": t in prevus, "explication": prevus.get(t)}
+            for t, m in sorted(par_taux.items(), key=lambda x: -x[1])]
+    return {"taux": taux, "hors_contrat": round(sum(x["montant"] for x in taux if not x["conforme"]), 2)}
+
+
 def lecture(imp):
     """Tout ce que l'écran affiche du contrat : fiche, avances regroupées, résultat, écart. None sans fiche contrat."""
     c = contrat_actif(imp)
@@ -128,6 +162,7 @@ def lecture(imp):
         "resultats": res, "resultat_total": resultat, "avances_recuperees": recupere,
         "avances_declarees": round(sum(float(a["montant"]) for a in c.avances), 2),
         "ecart": ecart if ecart is None or ecart > 0.005 else 0.0,
+        "controle_taux": controle_taux(imp, c),
     }
 
 

@@ -1,7 +1,7 @@
 // Bloc « Contrat » : clauses utiles du contrat déclaré par le client, résultat des albums et avances récupérées.
 // Les montants viennent des relevés et de la fiche contrat ; la lecture du contrat reste à faire confirmer.
-import { FileSignature, TriangleAlert } from "lucide-react";
-import { euros } from "@/lib/format";
+import { CircleCheck, FileSignature, TriangleAlert } from "lucide-react";
+import { euros, pourCent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ContratLecture } from "@/lib/types";
 
@@ -59,6 +59,33 @@ export function BlocContrat({ contrat }: { contrat: ContratLecture | null | unde
           {c.resultats.filter((r) => r.anterieur !== null).map((r) =>
             `${r.album} : ${euros(r.anterieur!)} de résultat avant le premier relevé détaillé (${r.anterieur_source}).`).join(" ")}
         </p>
+      )}
+
+      {c.controle_taux && c.controle_taux.taux.length > 0 && (
+        <div className="mt-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:px-5">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            {c.controle_taux.hors_contrat > 0
+              ? <TriangleAlert className="size-4 shrink-0 text-warning" />
+              : <CircleCheck className="size-4 shrink-0 text-primary" />}
+            Taux de partage vérifiés avec le contrat
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {c.controle_taux.taux.map((x) => (
+              <li key={x.taux} className="flex flex-wrap justify-between gap-x-3 gap-y-0.5">
+                <span>
+                  <span className="font-medium tabular-nums">{pourCent(x.taux * 100)}</span>
+                  <span className={cn("text-muted-foreground", !x.conforme && "text-warning")}> · {x.explication ?? "taux non prévu au contrat"}</span>
+                </span>
+                <span className="tabular-nums text-muted-foreground">{euros(x.montant)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {c.controle_taux.hors_contrat > 0
+              ? `${euros(c.controle_taux.hors_contrat)} de recettes partagées à un taux que le contrat ne prévoit pas : voir l'alerte « Taux de partage inhabituel ».`
+              : "Toutes les recettes sont partagées à un taux prévu au contrat : aucun écart. Ces taux sont pris en compte dans les alertes."}
+          </p>
+        </div>
       )}
 
       {c.avertissement && (

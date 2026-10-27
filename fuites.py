@@ -273,31 +273,51 @@ def lire_taux(s):
         return None
 
 def taux_inhabituels(imp):
-    """Règle 7 : lignes de recettes d'un contrat avec un autre taux que le taux habituel de ce contrat."""
+    """Règle 7 : lignes de recettes d'un contrat avec un autre taux que le taux habituel de ce contrat.
+    Avec une fiche contrat, les taux prévus au contrat (partage, partage moins la commission de gestion) ne sont pas
+    des anomalies, et l'écart se mesure par rapport au partage prévu au contrat."""
+    import contrats
+    c = contrats.contrat_actif(imp)
+    comptes_contrat = {a["contrat"] for a in c.albums} if c else set()
+    prevus = contrats.taux_prevus(c)
     sortie, par_contrat = [], defaultdict(list)
     for r in imp.revenus:
         t = lire_taux(r.taux_partage)
         if r.contrat and r.categorie in RECETTES and t and t > 0:
             par_contrat[r.contrat].append((r, t))
     for contrat, lignes in par_contrat.items():
-        poids = defaultdict(float)
-        for r, t in lignes:
-            poids[t] += abs(r.montant or 0)
-        habituel = max(poids, key=poids.get)
-        autres = [(r, t) for r, t in lignes if abs(t - habituel) > 1e-6 and (r.montant or 0) > 0]
+        selon_contrat = bool(prevus) and contrat in comptes_contrat
+        if selon_contrat:
+            habituel = c.partage_client
+            autres = [(r, t) for r, t in lignes if round(t, 4) not in prevus and (r.montant or 0) > 0]
+        else:
+            poids = defaultdict(float)
+            for r, t in lignes:
+                poids[t] += abs(r.montant or 0)
+            habituel = max(poids, key=poids.get)
+            autres = [(r, t) for r, t in lignes if abs(t - habituel) > 1e-6 and (r.montant or 0) > 0]
         if not autres:
             continue
         ecart = sum((r.montant / t) * (habituel - t) for r, t in autres)
         if abs(ecart) < 1:
             continue
         taux = sorted({t for _, t in autres})
+        lus = ", ".join(pour_cent(round(t * 100, 2)) for t in taux)
+        if selon_contrat:
+            methode = (f"Taux prévus au contrat, pris en compte : {' ; '.join(f'{pour_cent(round(t * 100, 2))} ({e})' for t, e in prevus.items())}. "
+                       f"{len(autres)} ligne(s) de recettes à {lus}, un taux que le contrat ne prévoit pas. "
+                       "Écart estimé : base de ces lignes × différence avec le partage du contrat.")
+            action = "Demander au distributeur pourquoi ces recettes ne sont pas partagées au taux du contrat, et réclamer la différence."
+        else:
+            methode = (f"Taux habituel du contrat : {pour_cent(round(habituel * 100, 2))}. {len(autres)} ligne(s) de recettes à "
+                       f"{lus}. Écart estimé : base de ces lignes × différence de taux. "
+                       "C'est peut-être prévu au contrat (par exemple pour le merchandising) : à vérifier.")
+            action = "Vérifier dans le contrat si ce taux est prévu pour ces recettes ; sinon, réclamer la différence."
         sortie.append(Fuite(
             regle=REGLES[6], oeuvre=f"Contrat {contrat}", payeur=next((r.payeur for r, _ in autres if r.payeur), None),
             montant=round(ecart, 2) if ecart > 0 else None,
-            methode=(f"Taux habituel du contrat : {pour_cent(round(habituel * 100, 2))}. {len(autres)} ligne(s) de recettes à "
-                     f"{', '.join(pour_cent(round(t * 100, 2)) for t in taux)}. Écart estimé : base de ces lignes × différence de taux. "
-                     "C'est peut-être prévu au contrat (par exemple pour le merchandising) : à vérifier."),
-            action="Vérifier dans le contrat si ce taux est prévu pour ces recettes ; sinon, réclamer la différence.",
+            methode=methode,
+            action=action,
             preuves=[f"{r.fichier}, ligne {r.ligne} : {r.periode or 'période non indiquée'}, {r.titre or 'recette'}, "
                      f"taux {r.taux_partage}, {euros(r.montant or 0)}" for r, _ in autres[:PREUVES_MAX]]))
     return sortie

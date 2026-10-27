@@ -101,6 +101,11 @@ export type ContratLecture = {
   avances_recuperees: number;
   avances_declarees: number;
   ecart: number | null;
+  // Taux de partage des recettes comparés aux taux prévus au contrat (absent sans taux déclaré dans la fiche)
+  controle_taux?: {
+    taux: { taux: number; montant: number; conforme: boolean; explication: string | null }[];
+    hors_contrat: number;
+  } | null;
 };
 
 // Recettes par pays (code à deux lettres), lues dans les relevés
