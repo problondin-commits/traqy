@@ -40,7 +40,7 @@ def lire_releves(fichiers, controle):
         raise ErreurReleves("Aucun relevé CSV reçu.")
     vus, frames = {}, []
     for nom, contenu in fichiers:
-        h = hashlib.md5(contenu).hexdigest()
+        h = hashlib.sha256(contenu).hexdigest()
         if h in vus:
             controle.append(f"DOUBLON ignoré : {nom} identique à {vus[h]}")
             continue

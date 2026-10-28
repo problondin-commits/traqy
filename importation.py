@@ -471,7 +471,7 @@ def importer(fichiers):
     """fichiers : liste de (nom, contenu en octets). Renvoie un Import dans le modèle interne."""
     res, vus, parts_par_tableau = Import(), {}, []
     for nom, brut in fichiers:
-        h = hashlib.md5(brut).hexdigest()
+        h = hashlib.sha256(brut).hexdigest()
         if h in vus:
             res.fichiers.append(BilanFichier(fichier=nom, statut="ignoré", messages=[f"Doublon exact de {vus[h]}."]))
             continue
