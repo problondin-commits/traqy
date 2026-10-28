@@ -1,0 +1,49 @@
+# Traqy · Vérification de sécurité du code avec Semgrep (gratuit), sur les ordinateurs Linux de GitHub.
+# Semgrep ne fonctionne pas sous Windows : il tourne donc ici, à chaque envoi sur main (et à la demande).
+# Le rapport est rangé dans la branche « rapports-securite » du dépôt (privé), pour être relu ensuite.
+# Cette branche contient un interface/vercel.json qui empêche Vercel d'essayer de la mettre en ligne.
+name: Sécurité du code (Semgrep)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer Semgrep
+        run: python -m pip install --quiet semgrep
+
+      - name: Analyser le code
+        run: |
+          semgrep scan --metrics=off \
+            --config p/python --config p/typescript --config p/react --config p/nextjs \
+            --config p/secrets --config p/owasp-top-ten \
+            --exclude maquettes --exclude node_modules --exclude .next \
+            --json --output semgrep.json || true
+          semgrep scan --metrics=off \
+            --config p/python --config p/typescript --config p/react --config p/nextjs \
+            --config p/secrets --config p/owasp-top-ten \
+            --exclude maquettes --exclude node_modules --exclude .next || true
+
+      - name: Ranger le rapport dans la branche rapports-securite
+        run: |
+          mkdir -p /tmp/rapport/interface && cd /tmp/rapport
+          cp "$GITHUB_WORKSPACE/semgrep.json" .
+          echo '{"git": {"deploymentEnabled": false}}' > interface/vercel.json
+          git init -q && git checkout -q -b rapports-securite
+          git config user.name "Traqy sécurité" && git config user.email "actions@github.com"
+          git add . && git commit -q -m "Rapport Semgrep du commit ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" rapports-securite
