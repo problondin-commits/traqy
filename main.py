@@ -41,6 +41,22 @@ def verifier_cle(request: Request, cle: Optional[str] = Security(cle_api)):
 
 app = FastAPI(title="Traqy API", version="1.2.0", dependencies=[Security(verifier_cle)])
 
+# Consignes de sécurité ajoutées à chaque réponse du moteur (rapport OWASP ZAP du 28/10/2026).
+ENTETES_SECURITE = {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
+
+@app.middleware("http")
+async def entetes_securite(request: Request, call_next):
+    reponse = await call_next(request)
+    for nom, valeur in ENTETES_SECURITE.items():
+        reponse.headers.setdefault(nom, valeur)
+    return reponse
+
 class InfractionItem(BaseModel):
     platform: str = Field(min_length=1, max_length=50)
     is_modified_version: bool
