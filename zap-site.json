@@ -1,0 +1,801 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "Wed, 28 Oct 2026 10:51:19",
+	"created": "2026-10-28T10:51:19.610236484Z",
+	"insights":[
+		{
+			"level": "Low",
+			"reason": "Warning",
+			"site": "",
+			"key": "insight.log.warn",
+			"description": "ZAP warnings logged - see the zap.log file for details",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "91"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.code.3xx",
+			"description": "Percentage of responses with status code 3xx",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "5"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.application/javascript",
+			"description": "Percentage of endpoints with content type application/javascript",
+			"statistic": "47"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.application/manifest+json",
+			"description": "Percentage of endpoints with content type application/manifest+json",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.application/pdf",
+			"description": "Percentage of endpoints with content type application/pdf",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.font/woff2",
+			"description": "Percentage of endpoints with content type font/woff2",
+			"statistic": "5"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.image/png",
+			"description": "Percentage of endpoints with content type image/png",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.image/svg+xml",
+			"description": "Percentage of endpoints with content type image/svg+xml",
+			"statistic": "8"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.text/css",
+			"description": "Percentage of endpoints with content type text/css",
+			"statistic": "2"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.ctype.text/html",
+			"description": "Percentage of endpoints with content type text/html",
+			"statistic": "26"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "100"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "34"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://traqy.vercel.app",
+			"key": "insight.response.slow",
+			"description": "Percentage of slow responses",
+			"statistic": "33"
+		}
+	],
+	"site":[ 
+		{
+			"@name": "https://traqy.vercel.app",
+			"@host": "traqy.vercel.app",
+			"@port": "443",
+			"@ssl": "true",
+			"alerts": [ 
+				{
+					"pluginid": "10055",
+					"alertRef": "10055-4",
+					"alert": "CSP: Wildcard Directive",
+					"name": "CSP: Wildcard Directive",
+					"riskcode": "2",
+					"confidence": "3",
+					"riskdesc": "Medium (High)",
+					"desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks. Including (but not limited to) Cross Site Scripting (XSS), and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware. CSP provides a set of standard HTTP headers that allow website owners to declare approved sources of content that browsers should be allowed to load on that page \u2014 covered types are JavaScript, CSS, HTML frames, fonts, images and embeddable objects such as Java applets, ActiveX, audio and video files.</p>",
+					"instances":[ 
+						{
+							"id": "7",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "The following directives either allow wildcard sources (or ancestors), are not defined, or are overly broadly defined:\nscript-src, style-src, img-src, connect-src, frame-src, font-src, media-src, manifest-src, worker-src"
+						},
+						{
+							"id": "2",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "The following directives either allow wildcard sources (or ancestors), are not defined, or are overly broadly defined:\nscript-src, style-src, img-src, connect-src, frame-src, font-src, media-src, manifest-src, worker-src"
+						},
+						{
+							"id": "26",
+							"uri": "https://traqy.vercel.app/sitemap.xml",
+							"nodeName": "https:\/\/traqy.vercel.app\/sitemap.xml",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "The following directives either allow wildcard sources (or ancestors), are not defined, or are overly broadly defined:\nscript-src, style-src, img-src, connect-src, frame-src, font-src, media-src, manifest-src, worker-src"
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that your web server, application server, load balancer, etc. is properly configured to set the Content-Security-Policy header.</p>",
+					"otherinfo": "<p>The following directives either allow wildcard sources (or ancestors), are not defined, or are overly broadly defined:</p><p>script-src, style-src, img-src, connect-src, frame-src, font-src, media-src, manifest-src, worker-src</p>",
+					"reference": "<p>https://www.w3.org/TR/CSP/</p><p>https://caniuse.com/#search=content+security+policy</p><p>https://content-security-policy.com/</p><p>https://github.com/HtmlUnit/htmlunit-csp</p><p>https://web.dev/articles/csp#resource-options</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10055",
+					"alertRef": "10055-5",
+					"alert": "CSP: script-src unsafe-inline",
+					"name": "CSP: script-src unsafe-inline",
+					"riskcode": "2",
+					"confidence": "3",
+					"riskdesc": "Medium (High)",
+					"desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks. Including (but not limited to) Cross Site Scripting (XSS), and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware. CSP provides a set of standard HTTP headers that allow website owners to declare approved sources of content that browsers should be allowed to load on that page \u2014 covered types are JavaScript, CSS, HTML frames, fonts, images and embeddable objects such as Java applets, ActiveX, audio and video files.</p>",
+					"instances":[ 
+						{
+							"id": "8",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "script-src includes unsafe-inline."
+						},
+						{
+							"id": "3",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "script-src includes unsafe-inline."
+						},
+						{
+							"id": "27",
+							"uri": "https://traqy.vercel.app/sitemap.xml",
+							"nodeName": "https:\/\/traqy.vercel.app\/sitemap.xml",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "script-src includes unsafe-inline."
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that your web server, application server, load balancer, etc. is properly configured to set the Content-Security-Policy header.</p>",
+					"otherinfo": "<p>script-src includes unsafe-inline.</p>",
+					"reference": "<p>https://www.w3.org/TR/CSP/</p><p>https://caniuse.com/#search=content+security+policy</p><p>https://content-security-policy.com/</p><p>https://github.com/HtmlUnit/htmlunit-csp</p><p>https://web.dev/articles/csp#resource-options</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10055",
+					"alertRef": "10055-6",
+					"alert": "CSP: style-src unsafe-inline",
+					"name": "CSP: style-src unsafe-inline",
+					"riskcode": "2",
+					"confidence": "3",
+					"riskdesc": "Medium (High)",
+					"desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks. Including (but not limited to) Cross Site Scripting (XSS), and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware. CSP provides a set of standard HTTP headers that allow website owners to declare approved sources of content that browsers should be allowed to load on that page \u2014 covered types are JavaScript, CSS, HTML frames, fonts, images and embeddable objects such as Java applets, ActiveX, audio and video files.</p>",
+					"instances":[ 
+						{
+							"id": "9",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "style-src includes unsafe-inline."
+						},
+						{
+							"id": "4",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "style-src includes unsafe-inline."
+						},
+						{
+							"id": "28",
+							"uri": "https://traqy.vercel.app/sitemap.xml",
+							"nodeName": "https:\/\/traqy.vercel.app\/sitemap.xml",
+							"method": "GET",
+							"param": "Content-Security-Policy",
+							"attack": "",
+							"evidence": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+							"otherinfo": "style-src includes unsafe-inline."
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Ensure that your web server, application server, load balancer, etc. is properly configured to set the Content-Security-Policy header.</p>",
+					"otherinfo": "<p>style-src includes unsafe-inline.</p>",
+					"reference": "<p>https://www.w3.org/TR/CSP/</p><p>https://caniuse.com/#search=content+security+policy</p><p>https://content-security-policy.com/</p><p>https://github.com/HtmlUnit/htmlunit-csp</p><p>https://web.dev/articles/csp#resource-options</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10098",
+					"alertRef": "10098",
+					"alert": "Cross-Domain Misconfiguration",
+					"name": "Cross-Domain Misconfiguration",
+					"riskcode": "2",
+					"confidence": "2",
+					"riskdesc": "Medium (Medium)",
+					"desc": "<p>Web browser data loading may be possible, due to a Cross Origin Resource Sharing (CORS) misconfiguration on the web server.</p>",
+					"instances":[ 
+						{
+							"id": "10",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "0",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/media/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/media\/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "6",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "23",
+							"uri": "https://traqy.vercel.app/traqy-logo-clair.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo-clair.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						},
+						{
+							"id": "20",
+							"uri": "https://traqy.vercel.app/traqy-logo.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that sensitive data is not available in an unauthenticated manner (using IP address white-listing, for instance).</p><p>Configure the \"Access-Control-Allow-Origin\" HTTP header to a more restrictive set of domains, or remove all CORS headers entirely, to allow the web browser to enforce the Same Origin Policy (SOP) in a more restrictive manner.</p>",
+					"otherinfo": "<p>The CORS misconfiguration on the web server permits cross-domain read requests from arbitrary third party domains, using unauthenticated APIs on this domain. Web browser implementations do not permit arbitrary third parties to read the response from authenticated APIs, however. This reduces the risk somewhat. This misconfiguration could be used by an attacker to access data that is available in an unauthenticated manner, but which uses some other form of security, such as IP address white-listing.</p>",
+					"reference": "<p>https://vulncat.fortify.com/en/detail?category=HTML5&subcategory=Overly%20Permissive%20CORS%20Policy</p>",
+					"cweid": "264",
+					"wascid": "14",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10044",
+					"alertRef": "10044-1",
+					"alert": "Big Redirect Detected (Potential Sensitive Information Leak)",
+					"name": "Big Redirect Detected (Potential Sensitive Information Leak)",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>The server has responded with a redirect that seems to provide a large response. This may indicate that although the server sent a redirect it also responded with body content (which may include sensitive details, PII, etc.).</p>",
+					"instances":[ 
+						{
+							"id": "5",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "Location header URI length: 6 [/depot].\nPredicted response size: 306.\nResponse Body Length: 25,957."
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Ensure that no sensitive information is leaked via redirect responses. Redirect responses should have almost no content.</p>",
+					"otherinfo": "<p>Location header URI length: 6 [/depot].</p><p>Predicted response size: 306.</p><p>Response Body Length: 25,957.</p>",
+					"reference": "",
+					"cweid": "201",
+					"wascid": "13",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-2",
+					"alert": "Cross-Origin-Embedder-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Embedder-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Embedder-Policy header is a response header that prevents a document from loading any cross-origin resources that don't explicitly grant the document permission (using CORP or CORS).</p>",
+					"instances":[ 
+						{
+							"id": "39",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "56",
+							"uri": "https://traqy.vercel.app/alertes",
+							"nodeName": "https:\/\/traqy.vercel.app\/alertes",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "52",
+							"uri": "https://traqy.vercel.app/depot",
+							"nodeName": "https:\/\/traqy.vercel.app\/depot",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "58",
+							"uri": "https://traqy.vercel.app/manques",
+							"nodeName": "https:\/\/traqy.vercel.app\/manques",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "60",
+							"uri": "https://traqy.vercel.app/rapports",
+							"nodeName": "https:\/\/traqy.vercel.app\/rapports",
+							"method": "GET",
+							"param": "Cross-Origin-Embedder-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Embedder-Policy header appropriately, and that it sets the Cross-Origin-Embedder-Policy header to 'require-corp' for documents.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Embedder-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-embedder-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-1",
+					"alert": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Resource-Policy header is an opt-in header designed to counter side-channels attacks like Spectre. Resource should be specifically set as shareable amongst different origins.</p>",
+					"instances":[ 
+						{
+							"id": "65",
+							"uri": "https://traqy.vercel.app/api/rapport",
+							"nodeName": "https:\/\/traqy.vercel.app\/api\/rapport",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Resource-Policy header appropriately, and that it sets the Cross-Origin-Resource-Policy header to 'same-origin' for all web pages.</p><p>'same-site' is considered as less secured and should be avoided.</p><p>If resources must be shared, set the header to 'cross-origin'.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Resource-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-resource-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "77"
+				},
+				{
+					"pluginid": "10015",
+					"alertRef": "10015",
+					"alert": "Re-examine Cache-control Directives",
+					"name": "Re-examine Cache-control Directives",
+					"riskcode": "0",
+					"confidence": "1",
+					"riskdesc": "Informational (Low)",
+					"desc": "<p>The cache-control header has not been set properly or is missing, allowing the browser and proxies to cache content. For static assets like css, js, or image files this might be intended, however, the resources should be reviewed to ensure that no sensitive content will be cached.</p>",
+					"instances":[ 
+						{
+							"id": "12",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "public, max-age=0, must-revalidate",
+							"otherinfo": ""
+						},
+						{
+							"id": "48",
+							"uri": "https://traqy.vercel.app/alertes",
+							"nodeName": "https:\/\/traqy.vercel.app\/alertes",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "public, max-age=0, must-revalidate",
+							"otherinfo": ""
+						},
+						{
+							"id": "41",
+							"uri": "https://traqy.vercel.app/depot",
+							"nodeName": "https:\/\/traqy.vercel.app\/depot",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "public, max-age=0, must-revalidate",
+							"otherinfo": ""
+						},
+						{
+							"id": "44",
+							"uri": "https://traqy.vercel.app/manifest.webmanifest",
+							"nodeName": "https:\/\/traqy.vercel.app\/manifest.webmanifest",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "public, max-age=0, must-revalidate",
+							"otherinfo": ""
+						},
+						{
+							"id": "57",
+							"uri": "https://traqy.vercel.app/manques",
+							"nodeName": "https:\/\/traqy.vercel.app\/manques",
+							"method": "GET",
+							"param": "cache-control",
+							"attack": "",
+							"evidence": "public, max-age=0, must-revalidate",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>For secure content, ensure the cache-control HTTP header is set with \"no-cache, no-store, must-revalidate\". If an asset should be cached consider setting the directives \"public, max-age, immutable\".</p>",
+					"otherinfo": "",
+					"reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#web-content-caching</p><p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control</p><p>https://grayduck.mn/2021/09/13/cache-control-recommendations/</p>",
+					"cweid": "525",
+					"wascid": "13",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "10050",
+					"alertRef": "10050-2",
+					"alert": "Retrieved from Cache",
+					"name": "Retrieved from Cache",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The content was retrieved from a shared cache. If the response data is sensitive, personal or user-specific, this may result in sensitive information being leaked. In some cases, this may even result in a user gaining complete control of the session of another user, depending on the configuration of the caching components in use in their environment. This is primarily an issue where caching servers such as \"proxy\" caches are configured on the local network. This configuration is typically found in corporate or educational environments, for instance.</p>",
+					"instances":[ 
+						{
+							"id": "11",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Age: 0",
+							"otherinfo": "The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use."
+						},
+						{
+							"id": "1",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/media/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/media\/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Age: 127867",
+							"otherinfo": "The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use."
+						},
+						{
+							"id": "13",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Age: 0",
+							"otherinfo": "The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use."
+						},
+						{
+							"id": "24",
+							"uri": "https://traqy.vercel.app/traqy-logo-clair.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo-clair.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Age: 0",
+							"otherinfo": "The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use."
+						},
+						{
+							"id": "21",
+							"uri": "https://traqy.vercel.app/traqy-logo.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Age: 0",
+							"otherinfo": "The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Validate that the response does not contain sensitive, personal or user-specific information. If it does, consider the use of the following HTTP response headers, to limit, or prevent the content being stored and retrieved from the cache by another user:</p><p>Cache-Control: no-cache, no-store, must-revalidate, private</p><p>Pragma: no-cache</p><p>Expires: 0</p><p>This configuration directs both HTTP 1.0 and HTTP 1.1 compliant caching servers to not store the response, and to not retrieve the response (without validation) from the cache, in response to a similar request.</p>",
+					"otherinfo": "<p>The presence of the 'Age' header indicates that a HTTP/1.1 compliant caching server is in use.</p>",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.rfc-editor.org/rfc/rfc9110.html</p>",
+					"cweid": "525",
+					"wascid": "-1",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-3",
+					"alert": "Storable and Cacheable Content",
+					"name": "Storable and Cacheable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are storable by caching components such as proxy servers, and may be retrieved directly from the cache, rather than from the origin server by the caching servers, in response to similar requests from other users. If the response data is sensitive, personal or user-specific, this may result in sensitive information being leaked. In some cases, this may even result in a user gaining complete control of the session of another user, depending on the configuration of the caching components in use in their environment. This is primarily an issue where \"shared\" caching servers such as \"proxy\" caches are configured on the local network. This configuration is typically found in corporate or educational environments, for instance.</p>",
+					"instances":[ 
+						{
+							"id": "55",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/chunks/0b61p6__3j741.js",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/chunks\/0b61p6__3j741.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=31536000",
+							"otherinfo": ""
+						},
+						{
+							"id": "43",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/chunks/2-mjkdhasa3ss.css",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/chunks\/2-mjkdhasa3ss.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=31536000",
+							"otherinfo": ""
+						},
+						{
+							"id": "36",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/media/07a39a8a4660cc7c-s.p.1v5bejj26fx9h.woff2",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/media\/07a39a8a4660cc7c-s.p.1v5bejj26fx9h.woff2",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=31536000",
+							"otherinfo": ""
+						},
+						{
+							"id": "19",
+							"uri": "https://traqy.vercel.app/_next/static/immutable/media/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"nodeName": "https:\/\/traqy.vercel.app\/_next\/static\/immutable\/media\/605ce01b664af129-s.p.0zr6hhvz-h9nw.woff2",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=31536000",
+							"otherinfo": ""
+						}
+					],
+					"count": "4",
+					"systemic": false,
+					"solution": "<p>Validate that the response does not contain sensitive, personal or user-specific information. If it does, consider the use of the following HTTP response headers, to limit, or prevent the content being stored and retrieved from the cache by another user:</p><p>Cache-Control: no-cache, no-store, must-revalidate, private</p><p>Pragma: no-cache</p><p>Expires: 0</p><p>This configuration directs both HTTP 1.0 and HTTP 1.1 compliant caching servers to not store the response, and to not retrieve the response (without validation) from the cache, in response to a similar request.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "48"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-2",
+					"alert": "Storable but Non-Cacheable Content",
+					"name": "Storable but Non-Cacheable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are storable by caching components such as proxy servers, but will not be retrieved directly from the cache, without validating the request upstream, in response to similar requests from other users.</p>",
+					"instances":[ 
+						{
+							"id": "32",
+							"uri": "https://traqy.vercel.app",
+							"nodeName": "https:\/\/traqy.vercel.app",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "33",
+							"uri": "https://traqy.vercel.app/robots.txt",
+							"nodeName": "https:\/\/traqy.vercel.app\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "31",
+							"uri": "https://traqy.vercel.app/sitemap.xml",
+							"nodeName": "https:\/\/traqy.vercel.app\/sitemap.xml",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "25",
+							"uri": "https://traqy.vercel.app/traqy-logo-clair.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo-clair.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						},
+						{
+							"id": "22",
+							"uri": "https://traqy.vercel.app/traqy-logo.svg",
+							"nodeName": "https:\/\/traqy.vercel.app\/traqy-logo.svg",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "max-age=0",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "",
+					"otherinfo": "",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "6"
+				},
+				{
+					"pluginid": "10031",
+					"alertRef": "10031",
+					"alert": "User Controllable HTML Element Attribute (Potential XSS)",
+					"name": "User Controllable HTML Element Attribute (Potential XSS)",
+					"riskcode": "0",
+					"confidence": "1",
+					"riskdesc": "Informational (Low)",
+					"desc": "<p>This check looks at user-supplied input in query string parameters and POST data to identify where certain HTML attribute values might be controlled. This provides hot-spot detection for XSS (cross-site scripting) that will require further review by a security analyst to determine exploitability.</p>",
+					"instances":[ 
+						{
+							"id": "68",
+							"uri": "https://traqy.vercel.app/projection?baisse_max=35&baisse_min=5&fourchette=catalogue&horizon=5",
+							"nodeName": "https:\/\/traqy.vercel.app\/projection (baisse_max,baisse_min,fourchette,horizon)",
+							"method": "GET",
+							"param": "baisse_max",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "User-controlled HTML attribute values were found. Try injecting special characters to see if XSS might be possible. The page at the following URL:\n\nhttps://traqy.vercel.app/projection?baisse_max=35&baisse_min=5&fourchette=catalogue&horizon=5\n\nappears to include user input in:\na(n) [input] tag [value] attribute\n\nThe user input found was:\nbaisse_max=35\n\nThe user-controlled value was:\n35"
+						},
+						{
+							"id": "67",
+							"uri": "https://traqy.vercel.app/projection?baisse_max=35&baisse_min=5&fourchette=catalogue&horizon=5",
+							"nodeName": "https:\/\/traqy.vercel.app\/projection (baisse_max,baisse_min,fourchette,horizon)",
+							"method": "GET",
+							"param": "fourchette",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "User-controlled HTML attribute values were found. Try injecting special characters to see if XSS might be possible. The page at the following URL:\n\nhttps://traqy.vercel.app/projection?baisse_max=35&baisse_min=5&fourchette=catalogue&horizon=5\n\nappears to include user input in:\na(n) [input] tag [value] attribute\n\nThe user input found was:\nfourchette=catalogue\n\nThe user-controlled value was:\ncatalogue"
+						}
+					],
+					"count": "2",
+					"systemic": false,
+					"solution": "<p>Validate all input and sanitize output it before writing to any HTML attributes.</p>",
+					"otherinfo": "<p>User-controlled HTML attribute values were found. Try injecting special characters to see if XSS might be possible. The page at the following URL:</p><p></p><p>https://traqy.vercel.app/projection?baisse_max=35&baisse_min=5&fourchette=catalogue&horizon=5</p><p></p><p>appears to include user input in:</p><p>a(n) [input] tag [value] attribute</p><p></p><p>The user input found was:</p><p>baisse_max=35</p><p></p><p>The user-controlled value was:</p><p>35</p>",
+					"reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html</p>",
+					"cweid": "20",
+					"wascid": "20",
+					"sourceid": "76"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}
