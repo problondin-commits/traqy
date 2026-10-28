@@ -24,3 +24,6 @@ node_modules/
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+# Réglages personnels de Claude Code (autorisations), jamais sur GitHub
+.claude/settings.local.json
