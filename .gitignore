@@ -27,3 +27,6 @@ Thumbs.db
 
 # Réglages personnels de Claude Code (autorisations), jamais sur GitHub
 .claude/settings.local.json
+
+# Documents de présentation (PDF), gardés sur l'ordinateur
+documents/
