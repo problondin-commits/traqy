@@ -3,6 +3,7 @@
 # Il n'attaque rien : aucune requête destructrice, seulement de la lecture. Cible : notre propre site et notre moteur.
 # Lancé quand ce fichier change, et à la demande (pas de passage automatique régulier). Rapport rangé dans la branche « rapports-zap »,
 # qui porte un interface/vercel.json empêchant Vercel d'essayer de la mettre en ligne.
+# Relancé le 28/10/2026 après l'ajout des consignes de sécurité.
 name: Sécurité du site en ligne (OWASP ZAP)
 
 on:
