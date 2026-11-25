@@ -258,6 +258,10 @@
   #compteur { flex:none; font:600 13px Inter, sans-serif; color:var(--gris); font-variant-numeric:tabular-nums; min-width:58px; text-align:center; align-self:center; }
   #pg { position:fixed; left:0; right:0; top:0; height:3px; background:var(--menthe); transform-origin:0 0; transition:transform .45s cubic-bezier(.2,.8,.2,1); z-index:5; }
   @media (max-width: 700px) { #chap { display:none; } #bas { justify-content:flex-end; } }
+  /* Téléphone à l'horizontale : la page occupe tout l'écran */
+  body.paysage #bas, body.paysage #pg { display:none; }
+  body.paysage #scene { top:50%; border-radius:0; }
+  body.paysage #scene .slide { border-radius:0; box-shadow:none; }
 </style>
 </head>
 <body>
@@ -549,8 +553,15 @@
   });
 
   var ici = -1;
+  function paysage() {
+    var tactile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+    return tactile && window.innerWidth > window.innerHeight;
+  }
   function ajuster() {
-    var k = Math.min(window.innerWidth / 1010, (window.innerHeight - 96) / 560);
+    var pl = paysage();
+    document.body.classList.toggle('paysage', pl);
+    var k = pl ? Math.min(window.innerWidth / 960, window.innerHeight / 540)
+               : Math.min(window.innerWidth / 1010, (window.innerHeight - 96) / 560);
     scene.style.transform = 'translate(-50%, -50%) scale(' + Math.max(k, 0.2) + ')';
   }
   var minuteurs = [], collageVu = false;
@@ -664,6 +675,13 @@
     })();
   }
   window.addEventListener('resize', ajuster);
+  window.addEventListener('orientationchange', function () { setTimeout(ajuster, 250); });
+  // Plein écran du navigateur (Android) au premier toucher à l'horizontale ; sur iPhone, la page remplit déjà l'écran.
+  document.addEventListener('touchend', function () {
+    if (!paysage() || document.fullscreenElement) return;
+    var d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
+    if (f) { try { var r = f.call(d); if (r && r.catch) r.catch(function () {}); } catch (e) {} }
+  });
   window.addEventListener('hashchange', depuisAdresse);
   ajuster(); depuisAdresse();
 })();
