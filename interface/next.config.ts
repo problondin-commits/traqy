@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: ENTETES_SECURITE }];
   },
+  // Les présentations investisseurs (lues par /presentation/[nom]) sont emportées avec le site.
+  outputFileTracingIncludes: { "/presentation/[nom]": ["./presentations/**"] },
   cacheComponents: true,
   partialPrefetching: true,
   // Tous les écrans dépendent du client choisi : la vérification « navigation instantanée »
