@@ -7,16 +7,21 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cookies } from "next/headers";
 
-const EMPREINTE = "65c8982bceb0c2ad992db5a424076221e593b1b71069a029bfd2b289c080e102";
-const COOKIE = "traqy_presentation";
-const FICHIERS: Record<string, string> = { pitch: "pitch.html", "deep-dive": "deep-dive.html" };
+// Présentations investisseurs : un code partagé. Page « Préparation » (pour Tom seul) : son propre code et son propre cookie.
+const INVESTISSEURS = { empreinte: "65c8982bceb0c2ad992db5a424076221e593b1b71069a029bfd2b289c080e102", cookie: "traqy_presentation" };
+const PREPARATION = { empreinte: "6ecb1244fd61174676d239e62df9f14b8734ecb5137171d2814cf1eac22af640", cookie: "traqy_preparation" };
+const FICHIERS: Record<string, { fichier: string; acces: { empreinte: string; cookie: string } }> = {
+  pitch: { fichier: "pitch.html", acces: INVESTISSEURS },
+  "deep-dive": { fichier: "deep-dive.html", acces: INVESTISSEURS },
+  preparation: { fichier: "preparation.html", acces: PREPARATION },
+};
 const TRENTE_JOURS = 60 * 60 * 24 * 30;
 const ENTETES = { "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store" };
 
-function codeValide(code: string | undefined | null): boolean {
+function codeValide(code: string | undefined | null, empreinte: string): boolean {
   if (!code) return false;
   const a = Buffer.from(createHash("sha256").update(code.trim().toUpperCase()).digest("hex"));
-  const b = Buffer.from(EMPREINTE);
+  const b = Buffer.from(empreinte);
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
@@ -44,20 +49,21 @@ function pageCode(nom: string, erreur: boolean): Response {
 
 export async function GET(_requete: Request, { params }: RouteContext<"/presentation/[nom]">) {
   const { nom } = await params;
-  const fichier = FICHIERS[nom];
-  if (!fichier) return new Response("Introuvable", { status: 404 });
+  const entree = FICHIERS[nom];
+  if (!entree) return new Response("Introuvable", { status: 404 });
   const pot = await cookies();
-  if (!codeValide(pot.get(COOKIE)?.value)) return pageCode(nom, false);
-  const html = await readFile(path.join(process.cwd(), "presentations", fichier), "utf8");
+  if (!codeValide(pot.get(entree.acces.cookie)?.value, entree.acces.empreinte)) return pageCode(nom, false);
+  const html = await readFile(path.join(process.cwd(), "presentations", entree.fichier), "utf8");
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", ...ENTETES } });
 }
 
 export async function POST(requete: Request, { params }: RouteContext<"/presentation/[nom]">) {
   const { nom } = await params;
-  if (!FICHIERS[nom]) return new Response("Introuvable", { status: 404 });
+  const entree = FICHIERS[nom];
+  if (!entree) return new Response("Introuvable", { status: 404 });
   const code = String((await requete.formData()).get("code") ?? "");
-  if (!codeValide(code)) return pageCode(nom, true);
+  if (!codeValide(code, entree.acces.empreinte)) return pageCode(nom, true);
   const pot = await cookies();
-  pot.set(COOKIE, code.trim().toUpperCase(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: TRENTE_JOURS, path: "/presentation" });
+  pot.set(entree.acces.cookie, code.trim().toUpperCase(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: TRENTE_JOURS, path: "/presentation" });
   return Response.redirect(new URL(`/presentation/${nom}`, requete.url), 303);
 }
